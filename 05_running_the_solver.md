@@ -8,24 +8,21 @@ Running the Solver `xspecfem3D`
 
 Now that you have successfully generated the databases, you are ready to compile the solver. In the main directory, type
 
-    make xspecfem3D
+      make xspecfem3D
 
 Please note that `xspecfem3D` must be called directly from the main directory, as most of the binaries of the package.
 
 The solver needs three input files in the `DATA` directory to run:
 
-<span>`Par_file`</span>  
-the main parameter file which was discussed in detail in the previous Chapter [cha:Creating-Distributed-Databases],
+-   <span>**`Par_file`**</span> the main parameter file which was discussed in detail in the previous Chapter [cha:Creating-Distributed-Databases],
 
-<span>`CMTSOLUTION`</span> or <span>`FORCESOLUTION`</span>  
-the earthquake source parameter file or the force source parameter file, and
+-   <span>**`CMTSOLUTION`**</span> or <span>**`FORCESOLUTION`**</span> the earthquake source parameter file or the force source parameter file, and
 
-<span>`STATIONS`</span>  
-the stations file.
+-   <span>**`STATIONS`**</span> the stations file.
 
 Most parameters in the `Par_file` should be set prior to running the databases generation. Only the following parameters may be changed after running `xgenerate_databases`:
 
--   the simulation type control parameters: `SIMULATION_TYPE` and `SAVE_FORWARD`
+-   the simulation type control parameters `SIMULATION_TYPE` and `SAVE_FORWARD`
 
 -   the time step parameters `NSTEP` and `DT`
 
@@ -109,32 +106,31 @@ Each line represents one station in the following format:
 
     Station Network Latitude(degrees) Longitude(degrees) Elevation(m) burial(m)
 
-The solver `xspecfem3D` filters the list of stations in file `DATA/STATIONS` to exclude stations that are not located within the region given in the `Par_file` (between `LATITUDE_MIN` and `LATITUDE_MAX` and between `LONGITUDE_MIN` and `LONGITUDE_MAX`). The filtered file is called `DATA/STATIONS_FILTERED`.
+The solver `xspecfem3D` filters the list of stations in file `DATA/STATIONS` to exclude stations that are not located within the region given in the `Par_file` (between `LATITUDE_MIN` and `LATITUDE_MAX` and between `LONGITUDE_MIN` and `LONGITUDE_MAX`). The filtered file is called `DATA/STATIONS_FILTERED`. Elevation and burial are generally applicable to geographical regions. Burial is measured down from the top surface.
 
-Elevation and burial are generally applicable to geographical regions. Burial is measured down from the top surface. For other problems in other fields (ultrasonic testing, medical imaging etc...), it may be confusing. We generally follow either of the following procedures for those kind of problems:
+For other problems in other fields (ultrasonic testing, medical imaging etc...), it may be confusing. We generally follow either one of the following procedures for those kind of problems:
 
-Procedure 1 (mostly for geophysics, when the top surface is a free surface (topography) and the five other edges of the mesh are absorbing surfaces):
-====================================================================================================================================================
+-   <span>*Procedure 1:*</span> mostly for geophysics, when the top surface is a free surface (topography) and the five other edges of the mesh are absorbing surfaces
 
-- Put the origin on the top of the model.
+    1.  Put the origin on the top of the model.
 
-- Let’s say you want to place two receivers at (x1,y1,z1) and (x2,y2,z2). Your STATIONS file should look like:
+    2.  Let’s say you want to place two receivers at (x1,y1,z1) and (x2,y2,z2). Your STATIONS file should look like:
 
-BONE GR y1 x1 0.00 -z1
-BONE GR y2 x2 0.00 -z2
+            BONE  GR  y1  x1  0.00  -z1
+            BONE  GR  y2  x2  0.00  -z2
 
-Procedure 2 (useful for other application domains, in which using the absolute \(Z\) position of the sources and receivers is more standard than using their depth from the surface):
-==================================================================================================================================================================================
+-   <span>*Procedure 2:*</span> useful for other application domains, in which using the absolute \(Z\) position of the sources and receivers is more standard than using their depth from the surface
 
-- In principle in the international CMTSOLUTION format in geophysics the depth is given in kilometers; however for users in other fields (non-destructive testing, medical imaging, near-surface studies...) who may prefer to give the position of the source (rather than its depth from the surface), or for people who use FORCESOLUTION to describe the source rather than CMTSOLUTION, we provide an option called USE\_SOURCES\_RECEIVERS\_Z in the Par\_file, and if so that position is read from CMTSOLUTION in meters rather than kilometers (and again, it is then the true position in the mesh, not the depth). When option USE\_SOURCES\_RECEIVERS\_Z in the Par\_file is on, this remark applies to the position of the receivers as well.
+    1.  In principle in the international CMTSOLUTION format in geophysics the depth is given in kilometers; however for users in other fields (non-destructive testing, medical imaging, near-surface studies...) who may prefer to give the position of the source (rather than its depth from the surface), or for people who use FORCESOLUTION to describe the source rather than CMTSOLUTION, we provide an option called USE\_SOURCES\_RECEIVERS\_Z in the Par\_file, and if so that position is read from CMTSOLUTION in meters rather than kilometers (and again, it is then the true position in the mesh, not the depth). When option USE\_SOURCES\_RECEIVERS\_Z in the Par\_file is on, this remark applies to the position of the receivers as well.
 
-- Let’s say you want to place two receivers at (x1,y1,z1) and (x2,y2,z2). Your STATIONS file should then look like:
-BONE GR y1 x1 0.00 z1
-BONE GR y2 x2 0.00 z2
-The option USE\_SOURCES\_RECEIVERS\_Z set to .true. will then discard the elevation and set burial as the \(z\) coordinate.
-Third column is Y and Fourth is X due to the latitude/longitude convention.
-You can replace the station name “BONE” with any word of length less than 32, and the network name “GR” with any word of length less than 8.
-You can always plot OUTPUT\_FILES/sr.vtk file in ParaView to check the source/receiver locations after your simulation.
+    2.  Let’s say you want to place two receivers at (x1,y1,z1) and (x2,y2,z2). Your STATIONS file should then look like:
+
+            BONE  GR  y1  x1  0.00  z1
+            BONE  GR  y2  x2  0.00  z2
+
+        The option USE\_SOURCES\_RECEIVERS\_Z set to .true. will then discard the elevation and set burial as the \(z\) coordinate. Third column is Y and Fourth is X due to the latitude/longitude convention.
+
+    You can replace the station name “BONE” with any word of length less than 32, and the network name “GR” with any word of length less than 8. And you can always plot OUTPUT\_FILES/sr.vtk file in ParaView to check the source/receiver locations after your simulation.
 
 Solver output is provided in the `OUTPUT_FILES` directory in the `output_solver.txt` file. Output can be directed to the screen instead by uncommenting a line in `constants.h`:
 
@@ -190,5 +186,5 @@ Kristeková, Miriam, Jozef Kristek, and Peter Moczo. 2009. “Time-Frequency Mis
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Oct 13, 2021)
+> (Nov 12, 2021)
 

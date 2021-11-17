@@ -15,7 +15,7 @@ After using `xmeshfem3D` or `xdecompose_mesh`, the next step in the workflow is 
 
 In the main directory, type
 
-    make xgenerate_databases
+      make xgenerate_databases
 
 Input for the program is provided through the main parameter file `Par_file`, which resides in the subdirectory `DATA`. Please note that `xgenerate_databases` must be called directly from the main directory, as most of the binaries of the package.
 
@@ -23,6 +23,8 @@ Main parameter file `Par_file`
 ------------------------------
 
 Before running `xgenerate_databases`, a number of parameters need to be set in the main parameter `Par_file` located in the subdirectory `DATA`:
+
+<span>**\(\bullet\) Simulation setup**</span>
 
 <span>`SIMULATION_TYPE`</span>  
 is set to 1 for forward simulations, 2 for adjoint simulations (see Section [sec:Adjoint-simulation-finite]) and 3 for kernel simulations (see Section [sec:Finite-Frequency-Kernels]).
@@ -44,6 +46,8 @@ The number of time steps of the simulation. This controls the length of the nume
 
 <span>`DT`</span>  
 The length of each time step in seconds. This feature is not used at the time of generating the distributed databases but is required for the solver. Please see also Section [sec:Choosing-the-Time-Step] for further details.
+
+<span>**\(\bullet\) Mesh setup**</span>
 
 <span>`NGNOD`</span>  
 The number of nodes for 2D and 3D shape functions for hexahedra. We use either 8-node mesh elements (bricks) or 27-node elements. If you use the internal mesher, the only option is 8-node bricks (27-node elements are not supported). `CUBIT` does not support HEX27 elements either (it can generate them, but they are flat, i.e. identical to HEX8). To generate HEX27 elements with curvature properly taken into account, you can use Gmsh <http://geuz.org/gmsh/>
@@ -102,6 +106,8 @@ Set to `.true.` if you want to use the attenuation model that scaled from the S-
 <span>`OLSEN_ATTENUATION_RATIO`</span>  
 Determines the Olsen’s constant in Olsen’s empirical relation (see Olsen, Day, and Bradley (2003)).
 
+<span>**\(\bullet\) Absorbing boundary conditions setup**</span>
+
 <span>`PML_CONDITIONS`</span>  
 Set to `.true.` to turn on C-PML boundary conditions for a regional simulation. Both fluids and elastic solids are supported.
 
@@ -119,6 +125,8 @@ Set to `.true.` to turn on absorbing boundary conditions on the top surface whic
 
 <span>`BOTTOM_FREE_SURFACE`</span>  
 When STACEY\_ABSORBING\_CONDITIONS is set to .true. : absorbing conditions are defined in xmin, xmax, ymin, ymax and zmin this option BOTTOM\_FREE\_SURFACE can be set to .true. to make zmin free surface instead of absorbing condition.
+
+<span>**\(\bullet\) Visualization setup**</span>
 
 <span>`CREATE_SHAKEMAP`</span>  
 Set this flag to `.true.` to create a ShakeMap, i.e., a peak ground velocity map of the maximum absolute value of the two horizontal components of the velocity vector.
@@ -153,8 +161,7 @@ Directory in which the distributed databases will be written. Generally one uses
 <span>`NTSTEP_BETWEEN_OUTPUT_INFO`</span>  
 This parameter specifies the interval at which basic information about a run is written to the file system (`timestamp*` files in the `OUTPUT_FILES` directory). If you have access to a fast machine, set `NTSTEP_BETWEEN_OUTPUT_INFO` to a relatively high value (e.g., at least 100, or even 1000 or more) to avoid writing output text files too often. This feature is not used at the time of meshing. One can set this parameter to a larger value than the number of time steps to avoid writing output during the run.
 
-<span>`NTSTEP_BETWEEN_OUTPUT_SEISMOS`</span>  
-This parameter specifies the interval at which synthetic seismograms are written in the `LOCAL_PATH` directory. If a run crashes, you may still find usable (but shorter than requested) seismograms in this directory. On a fast machine set `NTSTEP_BETWEEN_OUTPUT_SEISMOS` to a relatively high value to avoid writing to the seismograms too often. This feature is only relevant for the solver.
+<span>**\(\bullet\) Sources setup**</span>
 
 <span>`USE_FORCE_POINT_SOURCE`</span>  
 Turn this flag on to use a (tilted) `FORCESOLUTION` force point source instead of a `CMTSOLUTION` moment-tensor source. When the force source does not fall exactly at a grid point, the solver interpolates the force between grid points using Lagrange interpolants. This can be useful e.g. for oil industry foothills simulations in which the source is a vertical force, normal force, tilted force, or an impact etc. Note that in the `FORCESOLUTION` file, you will need to edit the East, North and vertical components of an arbitrary (not necessarily unitary, the code will normalize it automatically) direction vector of the force vector; thus refer to Appendix [cha:Coordinates] for the orientation of the reference frame. This vector is made unitary internally in the solver and thus only its direction matters here; its norm is ignored and the norm of the force used is the factor force source times the source time function.
@@ -171,6 +178,11 @@ Originally, if a `CMTSOLUTION` moment-tensor source is used, a (pseudo) Heavisid
 
 <span>`PRINT_SOURCE_TIME_FUNCTION`</span>  
 Turn this flag on to print information about the source time function in the file `OUTPUT_FILES/plot_source_time_function.txt`. This feature is only relevant for the solver.
+
+<span>**\(\bullet\) Additionals**</span>
+
+<span>`NTSTEP_BETWEEN_OUTPUT_SEISMOS`</span>  
+This parameter specifies the interval at which synthetic seismograms are written in the `LOCAL_PATH` directory. If a run crashes, you may still find usable (but shorter than requested) seismograms in this directory. On a fast machine set `NTSTEP_BETWEEN_OUTPUT_SEISMOS` to a relatively high value to avoid writing to the seismograms too often. This feature is only relevant for the solver.
 
 <span>`NUMBER_OF_SIMULTANEOUS_RUNS`</span>  
 adds the ability to run several calculations (several earthquakes) in an embarrassingly-parallel fashion from within the same run; this can be useful when using a very large supercomputer to compute many earthquakes in a catalog, in which case it can be better from a batch job submission point of view to start fewer and much larger jobs, each of them computing several earthquakes in parallel.
@@ -191,9 +203,6 @@ The option `NUMBER_OF_SIMULTANEOUS_RUNS` implements 3/.
 
 <span>`BROADCAST_SAME_MESH_AND_MODEL`</span>  
 if we perform simultaneous runs in parallel, if only the source and receivers vary between these runs but not the mesh nor the model (velocity and density) then we can also read the mesh and model files from a single run in the beginning and broadcast them to all the others; for a large number of simultaneous runs for instance when solving inverse problems iteratively this can DRASTICALLY reduce I/Os to disk in the solver (by a factor equal to `NUMBER_OF_SIMULTANEOUS_RUNS`), and reducing I/Os is crucial in the case of huge runs. Thus, always set this option to .true. if the mesh and the model are the same for all simultaneous runs. In that case there is no need to duplicate the mesh and model file database (the content of the DATABASES\_MPI directories) in each of the run0001, run0002,... directories, it is sufficient to have one in run0001 and the code will broadcast it to the others).
-
-<span>`USE_FAILSAFE_MECHANISM`</span>  
-if one or a few of these simultaneous runs fail, kill all the runs or let the others finish using a fail-safe mechanism (in most cases, should be set to true).
 
 TODO / future work to do: currently the `BROADCAST_SAME_MESH_AND_MODEL` option assumes to have the (main) mesh files in `run0001/DATABASES_MPI` or `run0001/OUTPUT_FILES/DATABASES_MPI`. However, for adjoint runs you still need a `DATABASES_MPI/` folder in each of the sub-runs directories, e.g. `run0002/DATABASES_MPI`, etc. to store the forward wavefields, kernels etc. of each sub-run. This would not be needed for forward simulations.
 
@@ -219,11 +228,11 @@ Turn this flag on to read and write forward arrays using ADIOS.
 `ADIOS_FOR_KERNELS`  
 Turn this flag on to produce ADIOS kernels that can later be visualized with the ADIOS version of combine\_vol\_data.
 
-The present version of SPECFEM can handle fully saturated porous simulations, Christina Morency implemented Biot equation. But the code cannot calculate partially saturated cases in its state. Christina Morency is presently working on a dual porosity, dual permeability formulation, type Pride and Berryman, for an other project, but it will not be available for some time.
+There are quite a few more parameters to change the default setup of your runs. Please check the comments in the `Par_file` directly for further explanations.
 
-The way we prescribe material property for porous material in SPECFEM3D is as follow: We use a file name “nummaterial\_poroelastic\_file”, which is located in the directory `MESH/`, the format is as follow:
+The present version of SPECFEM can handle fully saturated porous simulations. (Christina Morency implemented Biot’s equation. However, the code cannot calculate partially saturated cases in its state. Christina Morency is presently working on a dual porosity, dual permeability formulation, type Pride and Berryman, for an other project, but it will not be available for some time.) The way we prescribe material property for porous material in SPECFEM3D is as follow. We use a file `nummaterial_poroelastic_file`, which is located in the directory `MESH/`. The line format is as follow:
 
-     rhos rhof phi c kxx kxy kxz kyy kyz kzz Ks Kf Kfr etaf mufr
+      rhos rhof phi c kxx kxy kxz kyy kyz kzz Ks Kf Kfr etaf mufr
 
 where
 `rho_s` = solid density,
@@ -247,11 +256,7 @@ If you use PML, the mesh elements that belong to the PML layers can be acoustic 
 
 If you use PML and an external mesh (created using an external meshing tool such as CUBIT/TRELIS or similar), try to have elements inside the PML as regular as possible, i.e. ideally non-deformed cubes obtained by ‘extrusion’ of regular surface mesh elements meshing the outer edges of the computational domain without PML; by doing so, the PMLs obtained will be far more stable in time (PML being weakly unstable from a mathematical point of view, very deformed mesh elements inside the PMLs can trigger instabilities much more quickly). *We have two utilities in directory utils/CPML that do that automatically and that are very fast*. To stabilize PMLs it also helps to add a transition layer of geometrically-regular non-PML elements, in which attenuation is also turned off (i.e. \(Q_\kappa = Q_\mu = 9999\) in that layer), as in the red layer of Figure [fig:mesh<sub>e</sub>xtrusion]. Our tools in directory utils/CPML implement that transition layer automatically.
 
-If you use PML and an external tomographic velocity and density model, you should be careful because mathematically a PML cannot handle heterogeneities along the normal to the PML edge inside the PML layer. This comes from the fact that the damping profile that is defined assumes a constant velocity and density model along the normal direction.
-
-Thus, you need to modify your velocity and density model in order for it to be 1D inside the PML, as shown in Figure [fig:modify<sub>e</sub>xternal<sub>v</sub>elocity<sub>m</sub>odel<sub>t</sub>o<sub>u</sub>se<sub>P</sub>ML].
-
-This applies to the bottom layer as well; there you should make sure that your model is 1D and thus constant along the vertical direction.
+If you use PML and an external tomographic velocity and density model, you should be careful because mathematically a PML cannot handle heterogeneities along the normal to the PML edge inside the PML layer. This comes from the fact that the damping profile that is defined assumes a constant velocity and density model along the normal direction. Thus, you need to modify your velocity and density model in order for it to be 1D inside the PML, as shown in Figure [fig:modify<sub>e</sub>xternal<sub>v</sub>elocity<sub>m</sub>odel<sub>t</sub>o<sub>u</sub>se<sub>P</sub>ML]. This applies to the bottom layer as well; there you should make sure that your model is 1D and thus constant along the vertical direction.
 
 To summarize, only use a 3D velocity and density model inside the physical region, and in all the PML layers extend it by continuity from its values along the inner PML edge.
 
@@ -289,5 +294,5 @@ Olsen, K. B., S. M. Day, and C. R. Bradley. 2003. “Estimation of \(Q\) for Lon
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Oct 13, 2021)
+> (Nov 12, 2021)
 

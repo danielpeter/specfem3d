@@ -257,11 +257,11 @@ Prior to running and compiling this code, you have to export your mesh in CUBIT 
 
 Then, in the main directory, type
 
-    make xcheck_mesh_quality
+      make xcheck_mesh_quality
 
 and use
 
-    ./bin/xcheck_mesh_quality
+      ./bin/xcheck_mesh_quality
 
 to generate an OpenDX output file (`DX_mesh_quality.dx`<span>) that can be used to investigate mesh quality, e.g. skewness of elements, and a Gnuplot histogram (</span>`mesh_quality_histogram.txt`<span>) that can be plotted with gnuplot (type \`</span>`gnuplot plot_mesh_quality_histogram.gnu`<span>’). The histogram is also printed to the screen. Analyze that skewness histogram of mesh elements to make sure no element has a skewness above approximately 0.75, otherwise the mesh is of poor quality (and if even a single element has a skewness value above 0.80, then you must definitely improve the mesh). If you want to start designing your own meshes, this tool is useful for viewing your creations. You are striving for meshes with elements with ‘cube-like’ dimensions, e.g., the mesh should contain no very elongated or skewed elements.</span>
 
@@ -278,7 +278,7 @@ In most cases, the configuration with `./configure FC=ifort` should be sufficien
 
 When you are ready to compile, in the main directory type
 
-    make xdecompose_mesh
+      make xdecompose_mesh
 
 If all paths and flags have been set correctly, the executable `bin/xdecompose_mesh` should be produced.
 
@@ -306,13 +306,15 @@ In case you successfully ran the configuration script, you are also ready to com
 
 In the main directory, type
 
-    make xmeshfem3D
+      make xmeshfem3D
 
 If all paths and flags have been set correctly, the mesher should now compile and produce the executable `bin/xmeshfem3D`. Please note that `xmeshfem3D` must be called directly from the main directory, as most of the binaries of the package.
 
-Input for the mesh generation program is provided through the parameter file `Mesh_Par_file`, which resides in the subdirectory `DATA/meshfem3D_files/`. (to see how to use it, see the EXAMPLES specific to the internal mesher in directory `EXAMPLES/meshfem3D_examples/`. Before running the mesher, a number of parameters need to be set in the `Mesh_Par_file`. This requires a basic understanding of how the SEM is implemented, and we encourage you to read D. Komatitsch and Vilotte (1998; D. Komatitsch and Tromp 1999) and Komatitsch et al. (2004).
+Input for the mesh generation program is provided through the parameter file `Mesh_Par_file`, which resides in the subdirectory `DATA/meshfem3D_files/`. (To see how to use it, see the EXAMPLES specific to the internal mesher in directory `EXAMPLES/meshfem3D_examples/`.) Before running the mesher, a number of parameters need to be set in the `Mesh_Par_file`. This requires a basic understanding of how the SEM is implemented, and we encourage you to read D. Komatitsch and Vilotte (1998; D. Komatitsch and Tromp 1999) and Komatitsch et al. (2004).
 
-The mesher and the solver use UTM coordinates internally, therefore you need to define the zone number for the UTM projection (e.g., zone 11 for Los Angeles). Use decimal values for latitude and longitude (no minutes/seconds). These values are approximate; the mesher will round them off to define a square mesh in UTM coordinates. When running benchmarks on rectangular models, turn the UTM projection off by using the flag `SUPPRESS_UTM_PROJECTION`, in which case all ‘longitude’ parameters simply refer to the \(x\) axis, and all ‘latitude’ parameters simply refer to the \(y\) axis. To run the mesher for a global simulation, the following parameters need to be set in the `Mesh_Par_file`:
+The mesher and the solver use UTM coordinates internally, therefore you need to define the zone number for the UTM projection (e.g., zone 11 for Los Angeles). Use decimal values for latitude and longitude (no minutes/seconds). These values are approximate; the mesher will round them off to define a square mesh in UTM coordinates. When running benchmarks on rectangular models, turn the UTM projection off by using the flag `SUPPRESS_UTM_PROJECTION`, in which case all ‘longitude’ parameters simply refer to the \(x\) axis, and all ‘latitude’ parameters simply refer to the \(y\) axis.
+
+To run the internal mesher for a regional simulation, the following parameters need to be set in the `Mesh_Par_file`:
 
 <span>`LATITUDE_MIN`</span>  
 Minimum latitude in the block (negative for South).
@@ -412,21 +414,21 @@ The `INTERFACES_FILE` parameter of `Mesh_Par_File` defines the file which contai
 
 At the end of this file, you simply need to set the number of spectral elements in the vertical direction for each layer. We provide a few models in the <span>`EXAMPLES/`</span> directory.
 
-Finally, depending on your system, you might need to provide a file that tells MPI what compute nodes to use for the simulations. The file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file is provided in the file `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher` and `go_solver` default job submission scripts. See Chapter [cha:Scheduler] for information about running the code on a system with a scheduler, e.g., LSF.
+Now that you have set the appropriate parameters in the `Mesh_Par_file` and have compiled the mesher, you are ready to run it![1] Mesher output is provided in the `OUTPUT_FILES/` directory in `output_mesher.txt`; this file provides lots of details about the mesh that was generated.
 
-Now that you have set the appropriate parameters in the `Mesh_Par_file` and have compiled the mesher, you are ready to launch it! This is most easily accomplished based upon the `go_mesher` script. When you run on a PC cluster, the script assumes that the nodes are named n001, n002, etc. If this is not the case, change the `tr -d n` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [cha:Scheduler] for information about running the code on a system with a scheduler, e.g., LSF.
-
-Mesher output is provided in the `OUTPUT_FILES` directory in `output_mesher.txt`; this file provides lots of details about the mesh that was generated. Please note that the mesher suggests a time step `DT` to run the solver with. The mesher output file also contains a table about the quality of the mesh to indicate possible problems with the distortions of elements. Alternatively, output can be directed to the screen instead by uncommenting a line in `constants.h`:
+Please note that the mesher suggests a time step `DT` to run the solver with. The mesher output file also contains a table about the quality of the mesh to indicate possible problems with the distortions of elements. Alternatively, output can be directed to the screen instead by uncommenting a line in `constants.h`:
 
     ! uncomment this to write messages to the screen
     ! integer, parameter :: IMAIN = ISTANDARD_OUTPUT
 
-To control the quality of the mesh, check the standard output (either on the screen or in the `OUTPUT_FILES` directory in `output_mesher.txt`) and analyze the skewness histogram of mesh elements to make sure no element has a skewness above approximately 0.75, otherwise the mesh is of poor quality (and if even a single element has a skewness value above 0.80, then you must definitely improve the mesh). To draw the skewness histogram on the screen, type `gnuplot plot_mesh_quality_histogram.gnu`.
+To control the quality of the mesh, check the standard output (either on the screen or in the `OUTPUT_FILES/` directory in `output_mesher.txt`) and analyze the skewness histogram of mesh elements to make sure no element has a skewness above approximately 0.75, otherwise the mesh is of poor quality (and if even a single element has a skewness value above 0.80, then you must definitely improve the mesh). To draw the skewness histogram on the screen, you could type
+
+      gnuplot plot_mesh_quality_histogram.gnu
 
 References
 ----------
 
-Carrington, Laura, Dimitri Komatitsch, Michael Laurenzano, Mustafa Tikir, David Michéa, Nicolas <span>Le Goff</span>, Allan Snavely, and Jeroen Tromp. 2008. “High-Frequency Simulations of Global Seismic Wave Propagation Using SPECFEM3D\_GLOBE on 62 Thousand Processor Cores.” In *Proceedings of the SC’08 ACM/IEEE Conference on Supercomputing*, 60:1–60:11. Austin, Texas, USA: IEEE Press. doi:[10.1145/1413370.1413432](http://dx.doi.org/10.1145/1413370.1413432).
+Carrington, Laura, Dimitri Komatitsch, Michael Laurenzano, Mustafa Tikir, David Michéa, Nicolas <span>Le Goff</span>, Allan Snavely, and Jeroen Tromp. 2008. “High-Frequency Simulations of Global Seismic Wave Propagation Using SPECFEM3D\_GLOBE on 62 Thousand Processor Cores.” In *Proceedings of the SC’08 ACM/IEEE Conference on Supercomputing*, 60:1–60:11. Austin, Texas, USA: IEEE Press. doi:[10.1145/1413370.1413432](http://dx.doi.org/10.1145/1413370.1413432).<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Carrington, Laura, Dimitri Komatitsch, Michael Laurenzano, Mustafa Tikir, David Michéa, Nicolas <span>Le Goff</span>, Allan Snavely, and Jeroen Tromp. 2008. “High-Frequency Simulations of Global Seismic Wave Propagation Using SPECFEM3D\_GLOBE on 62 Thousand Processor Cores.” In *Proceedings of the SC’08 ACM/IEEE Conference on Supercomputing*, 60:1–60:11. Austin, Texas, USA: IEEE Press. doi:[10.1145/1413370.1413432</span></div>.
 
 Komatitsch, D., and J. Tromp. 1999. “Introduction to the Spectral-Element Method for 3-D Seismic Wave Propagation.” *Geophys. J. Int.* 139 (3): 806–22. doi:[10.1046/j.1365-246x.1999.00967.x](http://dx.doi.org/10.1046/j.1365-246x.1999.00967.x).
 
@@ -444,8 +446,10 @@ Martin, Roland, Dimitri Komatitsch, Céline Blitz, and Nicolas <span>Le Goff</sp
 
 Pellegrini, F., and J. Roman. 1996. “SCOTCH: A Software Package for Static Mapping by Dual Recursive Bipartitioning of Process and Architecture Graphs.” *Lecture Notes in Computer Science* 1067: 493–98.
 
+[1] Depending on your system, please check how to run executables with MPI. To run the mesher on your cluster, we provide some example scripts for you to modify accordingly in `utils/Cluster/`. For some installations, you might need to provide a file that tells MPI what compute nodes to use for the simulations. In this case, the file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file name is `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher***` and `go_solver**` default job submission scripts provided in directory `utils/Cluster/`. To run the mesher, it is most easily accomplished based upon the `go_mesher***` script. When you run on a PC cluster, the script assumes that the nodes are named n001, n002, etc. If this is not the case, change the `tr -d n` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [cha:Scheduler] for information about running the code on a system with a scheduler, e.g., LSF.
+
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Oct 13, 2021)
+> (Nov 12, 2021)
 
