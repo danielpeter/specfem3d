@@ -1,6 +1,7 @@
 **Table of Contents**
 
 -   [Running the Solver `xspecfem3D`](#running-the-solver-xspecfem3d)
+    -   [Note on the simultaneous simulation of several earthquakes](#note-on-the-simultaneous-simulation-of-several-earthquakes)
     -   [Note on the viscoelastic model used](#note-on-the-viscoelastic-model-used)
 
 Running the Solver `xspecfem3D`
@@ -156,7 +157,32 @@ It is important to realize that the CPU and memory requirements of the solver ar
 
 For the same model, one can rerun the solver for different events by simply changing the `CMTSOLUTION` or `FORCESOLUTION` file, or for different stations by changing the `STATIONS` file. There is no need to rerun the `xgenerate_databases` executable. Of course it is best to include as many stations as possible, since this does not add to the cost of the simulation.
 
-We have also added the ability to run several calculations (several earthquakes) in an embarrassingly-parallel fashion from within the same run; this can be useful when using a very large supercomputer to compute many earthquakes in a catalog, in which case it can be better from a batch job submission point of view to start fewer and much larger jobs, each of them computing several earthquakes in parallel. To turn that option on, set parameter `NUMBER_OF_SIMULTANEOUS_RUNS` to a value greater than 1 in file setup/constants.h.in before configuring and compiling the code. When that option is on, of course the number of processor cores used to start the code in the batch system must be a multiple of `NUMBER_OF_SIMULTANEOUS_RUNS`, all the individual runs must use the same number of processor cores, which as usual is `NPROC` in the input file `DATA/Par_file`, and thus the total number of processor cores to request from the batch system should be `NUMBER_OF_SIMULTANEOUS_RUNS \times NPROC`. All the runs to perform must be placed in directories called `run0001`, `run0002`, `run0003` and so on (with exactly four digits) and you must create a link from the root directory of the code to the first copy of the executable programs by typing `ln -s run0001/bin bin`.
+Note on the simultaneous simulation of several earthquakes
+----------------------------------------------------------
+
+We have also added the ability to run several calculations (several earthquakes) in an embarrassingly-parallel fashion from within the same run; this can be useful when using a very large supercomputer to compute many earthquakes in a catalog, in which case it can be better from a batch job submission point of view to start fewer and much larger jobs, each of them computing several earthquakes in parallel. To turn that option on, set parameter `NUMBER_OF_SIMULTANEOUS_RUNS` to a value greater than 1 in file `DATA/Par_file`.
+
+When that option is on, of course the number of processor cores used to start the code in the batch system must be a multiple of `NUMBER_OF_SIMULTANEOUS_RUNS`, all the individual runs must use the same number of processor cores, which as usual is `NPROC` in the input file `DATA/Par_file`, and thus the total number of processor cores to request from the batch system should be `NUMBER_OF_SIMULTANEOUS_RUNS \times NPROC`.
+
+![ Directory structure when simulating several earthquakes at once. To improve readability, only directories have been drawn.<span data-label="fig:simultaneousdirstruct"></span>](figures/simultaneous_dir_struct.jpg)
+<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure:  Directory structure when simulating several earthquakes at once. To improve readability, only directories have been drawn.<span data-label="fig:simultaneousdirstruct"></span></span></div>
+
+Figure [fig:simultaneous<sub>d</sub>ir<sub>s</sub>truct] shows what the directory structure should looks like when simulating multiple earthquakes at ones. All the runs to perform must be placed in directories called `run0001`, `run0002`, `run0003` and so on (with exactly four digits).
+
+-   The simulation is launched within the root directory `EXAMPLE_ROOT_DIR`
+    (usually `mpirun -np N ./bin/xspecfem3D`).
+
+-   `DATA` should contain the `Par_file` parameter file with `NUMBER_OF_SIMULTANEOUS_RUNS` as explained in Chapter [cha:Creating-Distributed-Databases].
+
+-   `DATABASES_MPI` and <span>OUTPUT\_FILES</span> directory may contain the mesher output but they are not required as they are superseded by the ones in the `runXXX` directories.
+
+-   `runXXXX` directories must be created beforehand. There should be be as many as `NUMBER_OF_SIMULTANEOUS_RUNS` and the numbering should be contiguous, starting from `0001`. They all should have `DATA`, `DATABASES_MPI` and `OUTPUT_FILES` directories. Additionally a `SEM` directory containing adjoint sources have to be created to perform adjoint simulations.
+
+-   `runXXXX/DATA` directories must all contain a `CMTSOLUTION` file, a `STATIONS` file along with an eventual `STATIONS_ADJOINT` file.
+
+-   If `BROADCAST_SAME_MESH_AND_MODEL` is set to `.true.` in `DATA/Par_file`, only `run0001/OUTPUT_FILES` and `run0001/DATABASES_MPI` directories need to contain the files outputted by the mesher.
+
+-   If `BROADCAST_SAME_MESH_AND_MODEL` is set to `.false.` in `DATA/Par_file`, every `runXXXX/OUTPUT_FILES` and `runXXXX/DATABASES_MPI` directories need to contain the files outputted by the mesher. Note that while the meshes might have been created from different models and parameter sets, they should have been created using the same number of MPI processes.
 
 Note on the viscoelastic model used
 -----------------------------------
@@ -186,5 +212,5 @@ Kristeková, Miriam, Jozef Kristek, and Peter Moczo. 2009. “Time-Frequency Mis
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov 19, 2021)
+> (Mar  5, 2022)
 
