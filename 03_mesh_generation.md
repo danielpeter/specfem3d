@@ -6,6 +6,7 @@
         -   [Exporting the Mesh with `run_cubit2specfem3d.py`](#exporting-the-mesh-with-run_cubit2specfem3dpy)
         -   [Partitioning the Mesh with `xdecompose_mesh`](#partitioning-the-mesh-with-xdecompose_mesh)
     -   [Meshing with `xmeshfem3D`](#meshing-with-xmeshfem3d)
+    -   [Poroelastic materials](#poroelastic-materials)
 
 Mesh Generation
 ===============
@@ -198,7 +199,10 @@ Defines the material properties.
 
         domain_ID material_ID rho vp vs Qkappa Qmu anisotropy_flag
 
-    where `domain_ID` **is 1 for acoustic and 2 for elastic or viscoelastic materials,** `material_ID` a unique identifier, `rho` the density in \(kg\, m^{-3}\), `vp` the P-wave speed in \(m\, s^{-1}\), `vs` the S-wave speed in \(m\, s^{-1}\), `Q` the quality factor and `anisotropy_flag` an identifier for anisotropic models. Note that both `Qkappa` and `Qmu` are ignored by the code unless `ATTENUATION` is set. If you want a model with no `Qmu` attenuation, both set `ATTENUATION` to `.false.` in the `Par_file` and set `Qmu` to 9999 here. If you want a model with no `Qkappa` attenuation, set `Qkappa` to 9999 here. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see doc/note\_on\_Qkappa\_versus\_Qp.pdf and utils/attenuation/conversion\_from\_Qkappa\_Qmu\_to\_Qp\_Qs\_from\_Dahlen\_Tromp\_959\_960.f90.
+    where `domain_ID` **is 1 for acoustic and 2 for elastic or viscoelastic materials,** `material_ID` a unique identifier, `rho` the density in \(kg\, m^{-3}\), `vp` the P-wave speed in \(m\, s^{-1}\), `vs` the S-wave speed in \(m\, s^{-1}\), `Q` the quality factor and `anisotropy_flag` an identifier for anisotropic models. Note that both `Qkappa` and `Qmu` are ignored by the code unless `ATTENUATION` is set. If you want a model with no `Qmu` attenuation, both set `ATTENUATION` to `.false.` in the `Par_file` and set `Qmu` to 9999 here. If you want a model with no `Qkappa` attenuation, set `Qkappa` to 9999 here. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp.
+
+    To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and the helper code
+    `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` in folder `utils/attenuation/`.
 
 -   For tomographic velocity models, please read Chapter [cha:-Changing-the] and Section [sec:Using-tomographic] ‘Using external tomographic Earth models’ for further details.
 
@@ -207,7 +211,7 @@ Contains the point locations in Cartesian coordinates of the mesh element corner
 
 <span>mesh\_file</span>  
 Contains the mesh element connectivity. The hexahedral elements can have 8 or 27 nodes.
-See picture doc/mesh\_numbering\_convention/numbering\_convention\_27\_nodes.jpg to see
+See picture `doc/mesh_numbering_convention/numbering_convention_27_nodes.jpg` to see
 in which (standard) order the points must be cited. In the case of 8 nodes, just include the first 8 points.
 
 <span>free\_or\_absorbing\_surface\_file\_zmax</span>  
@@ -269,7 +273,7 @@ to generate an OpenDX output file (`DX_mesh_quality.dx`<span>) that can be used 
 
 The SPECFEM3D Cartesian software package performs large scale simulations in a parallel ’Single Process Multiple Data’ way. The spectral-element mesh created with CUBIT needs to be distributed on the processors. This partitioning is executed once and for all prior to the execution of the solver so it is referred to as a static mapping.
 
-An efficient partitioning is important because it leverages the overall running time of the application. It amounts to balance the number of elements in each slice while minimizing the communication costs resulting from the placement of adjacent elements on different processors. `decompose_mesh` depends on the SCOTCH library (Pellegrini and Roman 1996), which provides efficient static mapping, graph and mesh partitioning routines. SCOTCH is a free software package developed by François Pellegrini et al. from LaBRI and INRIA in Bordeaux, France, downloadable from the web page <https://gforge.inria.fr/projects/scotch/>.
+An efficient partitioning is important because it leverages the overall running time of the application. It amounts to balance the number of elements in each slice while minimizing the communication costs resulting from the placement of adjacent elements on different processors. `decompose_mesh` depends on the SCOTCH library (Pellegrini and Roman 1996), which provides efficient static mapping, graph and mesh partitioning routines. SCOTCH is a free software package developed by François Pellegrini et al. from LaBRI and INRIA in Bordeaux, France, downloadable from the web page <https://gitlab.inria.fr/scotch/scotch>.
 
 In most cases, the configuration with `./configure FC=ifort` should be sufficient. During the configuration process, the script tries to find existing SCOTCH installations. In case your system has no pre-existing SCOTCH installation, we provide the source code of SCOTCH, which is released open source under the French CeCILL-C version 1 license, in directory `src/decompose_mesh/scotch_5.1.12b`. This version gets bundled with the compilation of the SPECFEM3D Cartesian package if no libraries could have been found. If this automatic compilation of the SCOTCH libraries fails, please refer to file INSTALL.txt in that directory to see further details how to compile it on your system. In case you want to use a pre-existing installation, make sure you have correctly specified the path of the SCOTCH library when using the option `--with-scotch-dir` with the `./configure` script. In the future you should be able to find more recent versions at <http://www.labri.fr/perso/pelegrin/scotch/scotch_en.html>.
 
@@ -383,15 +387,37 @@ The mesher generates the necessary partitions in parallel, one set for each of t
 <span>`NMATERIALS`</span>  
 The number of different materials in your model. In the following lines, each material needs to be defined as:
 
-    material_ID rho vp vs Q anisotropy_flag domain_ID
+-   acoustic/elastic material
 
-where
+        material_ID rho vp vs Qkappa Qmu anisotropy_flag domain_ID
 
--   `Q` : quality factor (0=no attenuation) for shear attenuation \(Q_{\mu}\)
+-   poroelastic material
+
+        material_id rho_s rho_f phi tort kxx kxy kxz kyy kyz kzz kappa_s kappa_f kappa_fr eta mu_fr domain_id
+
+-   tomographic
+
+        material_id type-keyword domain-name tomo-filename tomo_id domain_id
+
+For acoustic and elastic material, you would specify
+
+-   `material_ID` : a material ID number (1,2,..) to identify the material for the following mesh region selection.
+
+-   `rho`, `vp`, `vs` : density (in \(kg/m^3\)), \(V_p\) and \(V_s\) (in \(m/s\)) wave speeds
+
+-   `Qkappa, Qmu` : quality factor (0=no attenuation) for bulk \(Q_{\kappa}\) and shear attenuation \(Q_{\mu}\)
 
 -   `anisotropy_flag` : 0=no anisotropy / 1,2,.. check with implementation in `aniso_model.f90`
 
--   `domain_id` : 1=acoustic / 2=elastic
+-   `domain_id` : 1=acoustic / 2=elastic / 3=poroelastic
+
+For poroelastic materials, you would specify the corresponding poroelastic properties. Please read the section below for more on poroelastic parameters.
+
+For tomographic models, you would need to specify a negative `material_id` (-1,-2,..) and a corresponding `domain_id` for either acoustic (1) or elastic (2) domains. For example a line like:
+
+    -1 tomography elastic tomography_model.xyz 0 2
+
+where the specifications `tomography`, `tomography_model.xyz`, `0` are always used by default and the keyword `elastic` or `acoustic` will be defined internally according to your specified `domain_id`.
 
 <span>`NREGIONS`</span>  
 The number of regions in the mesh. In the following lines, because the mesh is regular or ’almost regular’, each region is defined as:
@@ -414,7 +440,11 @@ The `INTERFACES_FILE` parameter of `Mesh_Par_File` defines the file which contai
 
 At the end of this file, you simply need to set the number of spectral elements in the vertical direction for each layer. We provide a few models in the <span>`EXAMPLES/`</span> directory.
 
-Now that you have set the appropriate parameters in the `Mesh_Par_file` and have compiled the mesher, you are ready to run it![1] Mesher output is provided in the `OUTPUT_FILES/` directory in `output_mesher.txt`; this file provides lots of details about the mesh that was generated.
+Now that you have set the appropriate parameters in the `Mesh_Par_file` and have compiled the mesher, you are ready to run it!
+
+Depending on your system, please check how to run executables with MPI. To run the mesher on your cluster, we provide some example scripts for you to modify accordingly in `utils/Cluster/`. For some installations, you might need to provide a file that tells MPI what compute nodes to use for the simulations. In this case, the file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file name is `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher***` and `go_solver**` default job submission scripts provided in directory `utils/Cluster/`. To run the mesher, it is most easily accomplished based upon the `go_mesher***` script. When you run on a PC cluster, the script assumes that the nodes are named `n001`, `n002`, etc. If this is not the case, change the `tr -d n` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [cha:Scheduler] for information about running the code on a system with a scheduler, e.g., LSF.
+
+Mesher output is provided in the `OUTPUT_FILES/` directory in `output_mesher.txt`; this file provides lots of details about the mesh that was generated.
 
 Please note that the mesher suggests a time step `DT` to run the solver with. The mesher output file also contains a table about the quality of the mesh to indicate possible problems with the distortions of elements. Alternatively, output can be directed to the screen instead by uncommenting a line in `constants.h`:
 
@@ -425,10 +455,41 @@ To control the quality of the mesh, check the standard output (either on the scr
 
       gnuplot plot_mesh_quality_histogram.gnu
 
+Poroelastic materials
+---------------------
+
+The present version of SPECFEM can handle fully saturated porous simulations. At the moment, the code implements Biot’s equation. However, the code cannot calculate partially saturated cases in its current state.
+
+The way we prescribe material property for porous material in SPECFEM3D depends on wheter the internal mesher `xmeshfem3D` or an external mesher like CUBIT is taken. For external meshers which provide the resulting meshes in a folder like `MESH/`, we use a file `nummaterial_poroelastic_file`, which needs to be added to this directory `MESH/`. The line format for poroelastic materials is as follow:
+
+      rhos rhof phi c kxx kxy kxz kyy kyz kzz Ks Kf Kfr etaf mufr
+
+where
+`rho_s` = solid density,
+`rho_f` = fluid density,
+`phi` = porosity,
+`tort` = tortuosity,
+`kxx` = xx component of permeability tensor,
+`kxy` = xy,yx components of permeability tensor,
+`kyy` = yy component of permeability tensor,
+`kxz` = xz,zx components of permeability tensor,
+`kzz` = zz component of permeability tensor,
+`kappa_s` = solid bulk modulus,
+`kappa_f` = fluid bulk modulus,
+`kappa_fr` = frame bulk modulus,
+`eta_f` = fluid viscosity,
+`mu_fr` = frame shear modulus.
+
+Using an external mesh (for instance coming from CUBIT/TRELIS), poroelastic materials have the ID number 3, while 1 is acoustic and 2 is elastic (see the example in the package: EXAMPLES/homogeneous\_poroelastic).
+
+In case the internal mesher `xmeshfem3D` is used, the same poroelastic material properties will be defined in the `Mesh_Par_file`. See the above section [cha:Running-the-Mesher-Meshfem3D] on how the corresponding line format would look like.
+
+Note that attenuation is not implemented yet for poroelastic domains, thus there is no need for specifiying Q values.
+
 References
 ----------
 
-Carrington, Laura, Dimitri Komatitsch, Michael Laurenzano, Mustafa Tikir, David Michéa, Nicolas <span>Le Goff</span>, Allan Snavely, and Jeroen Tromp. 2008. “High-Frequency Simulations of Global Seismic Wave Propagation Using SPECFEM3D\_GLOBE on 62 Thousand Processor Cores.” In *Proceedings of the SC’08 ACM/IEEE Conference on Supercomputing*, 60:1–60:11. Austin, Texas, USA: IEEE Press. doi:[10.1145/1413370.1413432](http://dx.doi.org/10.1145/1413370.1413432).<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Carrington, Laura, Dimitri Komatitsch, Michael Laurenzano, Mustafa Tikir, David Michéa, Nicolas <span>Le Goff</span>, Allan Snavely, and Jeroen Tromp. 2008. “High-Frequency Simulations of Global Seismic Wave Propagation Using SPECFEM3D\_GLOBE on 62 Thousand Processor Cores.” In *Proceedings of the SC’08 ACM/IEEE Conference on Supercomputing*, 60:1–60:11. Austin, Texas, USA: IEEE Press. doi:[10.1145/1413370.1413432</span></div>.
+Carrington, Laura, Dimitri Komatitsch, Michael Laurenzano, Mustafa Tikir, David Michéa, Nicolas <span>Le Goff</span>, Allan Snavely, and Jeroen Tromp. 2008. “High-Frequency Simulations of Global Seismic Wave Propagation Using SPECFEM3D\_GLOBE on 62 Thousand Processor Cores.” In *Proceedings of the SC’08 ACM/IEEE Conference on Supercomputing*, 60:1–60:11. Austin, Texas, USA: IEEE Press. doi:[10.1145/1413370.1413432](http://dx.doi.org/10.1145/1413370.1413432).
 
 Komatitsch, D., and J. Tromp. 1999. “Introduction to the Spectral-Element Method for 3-D Seismic Wave Propagation.” *Geophys. J. Int.* 139 (3): 806–22. doi:[10.1046/j.1365-246x.1999.00967.x](http://dx.doi.org/10.1046/j.1365-246x.1999.00967.x).
 
@@ -446,10 +507,8 @@ Martin, Roland, Dimitri Komatitsch, Céline Blitz, and Nicolas <span>Le Goff</sp
 
 Pellegrini, F., and J. Roman. 1996. “SCOTCH: A Software Package for Static Mapping by Dual Recursive Bipartitioning of Process and Architecture Graphs.” *Lecture Notes in Computer Science* 1067: 493–98.
 
-[1] Depending on your system, please check how to run executables with MPI. To run the mesher on your cluster, we provide some example scripts for you to modify accordingly in `utils/Cluster/`. For some installations, you might need to provide a file that tells MPI what compute nodes to use for the simulations. In this case, the file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file name is `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher***` and `go_solver**` default job submission scripts provided in directory `utils/Cluster/`. To run the mesher, it is most easily accomplished based upon the `go_mesher***` script. When you run on a PC cluster, the script assumes that the nodes are named n001, n002, etc. If this is not the case, change the `tr -d n` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [cha:Scheduler] for information about running the code on a system with a scheduler, e.g., LSF.
-
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Mar 17, 2022)
+> (Mar 25, 2022)
 
