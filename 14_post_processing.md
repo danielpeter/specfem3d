@@ -1,16 +1,16 @@
 **Table of Contents**
 
--   [Post-Processing Scripts](#post-processing-scripts)
-    -   [Process Data and Synthetics](#process-data-and-synthetics)
-        -   [Data processing script `process_data.pl`](#data-processing-script-process_datapl)
-        -   [Synthetics processing script `process_syn.pl`](#synthetics-processing-script-process_synpl)
-        -   [Script `rotate.pl`](#script-rotatepl)
-    -   [Collect Synthetic Seismograms](#collect-synthetic-seismograms)
-    -   [Clean Local Database](#clean-local-database)
-    -   [Plot Movie Snapshots and Synthetic Shakemaps](#plot-movie-snapshots-and-synthetic-shakemaps)
-        -   [Script `movie2gif.gmt.pl`](#script-movie2gifgmtpl)
-        -   [Script `plot_shakemap.gmt.pl`](#script-plot_shakemapgmtpl)
-    -   [Map Local Database](#map-local-database)
+- [Post-Processing Scripts](#post-processing-scripts)
+  - [Process Data and Synthetics](#sec:Process-data-and-syn)
+    - [Data processing script `process_data.pl`](#data-processing-script-process_data.pl)
+    - [Synthetics processing script `process_syn.pl`](#synthetics-processing-script-process_syn.pl)
+    - [Script `rotate.pl`](#script-rotate.pl)
+  - [Collect Synthetic Seismograms](#collect-synthetic-seismograms)
+  - [Clean Local Database](#clean-local-database)
+  - [Plot Movie Snapshots and Synthetic Shakemaps](#plot-movie-snapshots-and-synthetic-shakemaps)
+    - [Script `movie2gif.gmt.pl`](#script-movie2gif.gmt.pl)
+    - [Script `plot_shakemap.gmt.pl`](#script-plot_shakemap.gmt.pl)
+  - [Map Local Database](#map-local-database)
 
 Post-Processing Scripts
 =======================
@@ -67,7 +67,7 @@ In order to convert between SAC format and ASCII files, useful scripts are provi
 
 ### Script `rotate.pl`
 
-The original data and synthetics have three components: vertical (BHZ resp. BXZ), north (BHN resp. BXN) and east (BHE resp. BXE). However, for most seismology applications, transverse and radial components are also desirable. Therefore, we need to rotate the horizontal components of both the data and the synthetics to the transverse and radial direction, and `rotate.pl`<span> can be used to accomplish this:</span>
+The original data and synthetics have three components: vertical (BHZ resp. BXZ), north (BHN resp. BXN) and east (BHE resp. BXE). However, for most seismology applications, transverse and radial components are also desirable. Therefore, we need to rotate the horizontal components of both the data and the synthetics to the transverse and radial direction, and `rotate.pl` can be used to accomplish this:
 
     rotate.pl -l 0 -L 180 -d DATA/*.BHE.SAC.bp
     rotate.pl -l 0 -L 180 SEM/*.BXE.semd.sac.bp
@@ -77,19 +77,19 @@ where the first command performs rotation on the SAC data obtained through Seism
 Collect Synthetic Seismograms
 -----------------------------
 
-The forward and adjoint simulations generate synthetic seismograms in the `OUTPUT_FILES/` directory by default. For the forward simulation, the files are named like `NT.STA.BX?.semd` for two-column time series, or `NT.STA.BX?.semd.sac` for ASCII SAC format, where NT and STA are the network code and station name, and `BX?` stands for the component name. Please see the Appendix [cha:Coordinates] and [cha:channel-codes] for further details.
+The forward and adjoint simulations generate synthetic seismograms in the `OUTPUT_FILES/` directory by default. For the forward simulation, the files are named like `NT.STA.BX?.semd` for two-column time series, or `NT.STA.BX?.semd.sac` for ASCII SAC format, where NT and STA are the network code and station name, and `BX?` stands for the component name. Please see the Appendix [\[cha:Coordinates\]](#cha:Coordinates) and [\[cha:channel-codes\]](#cha:channel-codes) for further details.
 
-The adjont simulations generate synthetic seismograms with the name `NT.S?????.S??.sem` (refer to Section [sec:Adjoint-simulation-sources] for details). The kernel simulations output the back-reconstructed synthetic seismogram in the name `NT.STA.BX?.semd`, mainly for the purpose of checking the accuracy of the reconstruction. Refer to Section [sec:Adjoint-simulation-finite] for further details.
+The adjont simulations generate synthetic seismograms with the name `NT.S?????.S??.sem` (refer to Section [\[sec:Adjoint-simulation-sources\]](#sec:Adjoint-simulation-sources) for details). The kernel simulations output the back-reconstructed synthetic seismogram in the name `NT.STA.BX?.semd`, mainly for the purpose of checking the accuracy of the reconstruction. Refer to Section [\[sec:Adjoint-simulation-finite\]](#sec:Adjoint-simulation-finite) for further details.
 
 You do have further options to change this default output behavior, given in the main constants file `constants.h` located in `src/shared/` directory:
 
-<span>`SEISMOGRAMS_BINARY`</span>  
+`SEISMOGRAMS_BINARY`  
 set to `.true.` to have seismograms written out in binary format.
 
-<span>`WRITE_SEISMOGRAMS_BY_MAIN`</span>  
+`WRITE_SEISMOGRAMS_BY_MAIN`  
 Set to `.true.` to have only the main process writing out seismograms. This can be useful on a cluster, where only the main process node has access to the output directory.
 
-<span>`USE_OUTPUT_FILES_PATH`</span>  
+`USE_OUTPUT_FILES_PATH`  
 Set to `.false.` to have the seismograms output to `LOCAL_PATH` directory specified in the main parameter file `DATA/Par_file`. In this case, you could collect the synthetics onto the frontend using the `collect_seismo_lsf_multi.pl` script located in the `utils/Cluster/lsf/` directory. The usage of the script would be e.g.:
 
     collect_seismo.pl machines DATA/Par_file
@@ -110,7 +110,7 @@ Plot Movie Snapshots and Synthetic Shakemaps
 
 ### Script `movie2gif.gmt.pl`
 
-With the movie data saved in `OUTPUT_FILES/` at the end of a movie simulation (`MOVIE_SURFACE=.true.`<span>), you can run the </span>`` `create_movie_shakemap_AVS_DX_GMT ``<span>’ code to convert these binary movie data into GMT xyz files for futher processing. A sample script </span>`movie2gif.gmt.pl`<span> is provided to do this conversion, and then plot the movie snapshots in GMT, for example:</span>
+With the movie data saved in `OUTPUT_FILES/` at the end of a movie simulation (`MOVIE_SURFACE=.true.`), you can run the `‘create_movie_shakemap_AVS_DX_GMT`’ code to convert these binary movie data into GMT xyz files for futher processing. A sample script `movie2gif.gmt.pl` is provided to do this conversion, and then plot the movie snapshots in GMT, for example:
 
     movie2gif.gmt.pl -m CMTSOLUTION -g -f 1/40 -n -2 -p
 
@@ -119,7 +119,7 @@ which for the first through the 40th movie frame, converts the `moviedata` files
 ### Script `plot_shakemap.gmt.pl`
 
 With the shakemap data saved in `OUTPUT_FILES/` at the end of a shakemap simulation
-(`CREATE_SHAKEMAP=.true.`), you can also run `` `create_movie_shakemap_AVS_DX_GMT ``’ code to convert the binary shakemap data into GMT xyz files. A sample script `plot_shakemap.gmt.pl` is provided to do this conversion, and then plot the shakemaps in GMT, for example:
+(`CREATE_SHAKEMAP=.true.`), you can also run `‘create_movie_shakemap_AVS_DX_GMT`’ code to convert the binary shakemap data into GMT xyz files. A sample script `plot_shakemap.gmt.pl` is provided to do this conversion, and then plot the shakemaps in GMT, for example:
 
     plot_shakemap.gmt.pl data _dir type(1,2,3) CMTSOLUTION
 
@@ -128,7 +128,7 @@ where `type=1` for a displacement shakemap, `2` for velocity, and `3` for accele
 Map Local Database
 ------------------
 
-A sample program `remap_database` is provided to map the local database from a set of machines to another set of machines. This is especially useful when you want to run mesher and solver, or different types of solvers separately through a scheduler (refer to Chapter [cha:Scheduler]).
+A sample program `remap_database` is provided to map the local database from a set of machines to another set of machines. This is especially useful when you want to run mesher and solver, or different types of solvers separately through a scheduler (refer to Chapter [\[cha:Scheduler\]](#cha:Scheduler)).
 
     run_lsf.bash --gm-no-shmem --gm-copy-env remap_database old_machines 150
 
@@ -137,5 +137,5 @@ where `old_machines` is the LSF machine file used in the previous simulation, an
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (May 17, 2022)
+> (Oct 26, 2022)
 

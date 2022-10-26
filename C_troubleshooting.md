@@ -1,7 +1,7 @@
 **Table of Contents**
 
--   [Troubleshooting](#troubleshooting)
-    -   [FAQ](#faq)
+- [Troubleshooting](#cha:Troubleshooting)
+  - [FAQ](#faq)
 
 Troubleshooting
 ===============
@@ -9,8 +9,8 @@ Troubleshooting
 FAQ
 ---
 
-<span>configuration fails:</span>  
-Examine the log file ’config.log’. It contains detailed informations. In many cases, the paths to these specific compiler commands F90, CC and MPIF90 will not be correct if \`./configure\` fails.
+configuration fails:  
+Examine the log file ’config.log’. It contains detailed informations. In many cases, the paths to these specific compiler commands F90, CC and MPIF90 will not be correct if ‘./configure‘ fails.
 
 Please make sure that you have a working installation of a Fortran compiler, a C compiler and an MPI implementation. You should be able to compile this little program code:
 
@@ -23,7 +23,7 @@ Please make sure that you have a working installation of a Fortran compiler, a C
      call MPI_FINALIZE(ier)
      end
 
-<span>compilation fails stating:</span>  
+compilation fails stating:  
     ...
      obj/program_generate_databases.o: In function `MAIN__':
      program_generate_databases.f90:(.text+0x14): undefined reference to `_gfortran_set_std'
@@ -35,7 +35,7 @@ Normally, this message will appear when you are mixing two different Fortran com
 
 fix: e.g. specify \> ./configure FC=gfortran MPIF90=/usr/local/openmpi-gfortran/bin/mpif90
 
-<span>after executing `xmeshfem3D` I’ve got elements with skewness of 81% percent, what does this mean:</span>  
+after executing `xmeshfem3D` I’ve got elements with skewness of 81% percent, what does this mean:  
 Look at the skewness table printed in the `output_mesher.txt` file after executing `xmeshfem3D` for the example given in `EXAMPLES/meshfem3D_examples/simple_model/`:
 
     ...
@@ -50,7 +50,7 @@ The first line means that you have 27,648 elements with a skewness value between
      total number of elements in entire mesh: 33792
     ...
 
-which gives you that: 27,648 / 33,792 \(\sim\) 81.8 % of all elements are not skewed, i.e. regular elements. a fantastic value :)
+which gives you that: 27,648 / 33,792 $\sim$ 81.8 % of all elements are not skewed, i.e. regular elements. a fantastic value :)
 
 The histogram lists for this mesh also some stronger skewed elements, for example the worst ones belong to:
 
@@ -60,14 +60,14 @@ The histogram lists for this mesh also some stronger skewed elements, for exampl
 
 about 6 % of all elements have distortions with a skewness value between 0.6 and 0.65. The skewness values give you a hint of how good your mesh is. In an ideal world, you would want to have no distortions, just like the 81% from above. Those elements give you the best approximate values by the GLL quadrature used in the spectral-element method. However, having weakly distorted elements is still fine and the solutions are still accurate enough. So empirically, values up to around 0.7 are tolerable, above that you should consider remeshing...
 
-To give you an idea why some of the elements are distorted, see the following figure [fig:mesh.vp] of the mesh you obtain in the example `EXAMPLES/meshfem3D_examples/simple_model/`.
+To give you an idea why some of the elements are distorted, see the following figure [1.1](#fig:mesh.vp) of the mesh you obtain in the example `EXAMPLES/meshfem3D_examples/simple_model/`.
 
-![Paraview visualization using the mesh vtk-files for the example given in `EXAMPLES/meshfem3D_examples/simple_model/`.<span data-label="fig:mesh.vp"></span>](figures/mesh_vp.jpg)
-<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Paraview visualization using the mesh vtk-files for the example given in `EXAMPLES/meshfem3D_examples/simple_model/`.<span data-label="fig:mesh.vp"></span></span></div>
+![Paraview visualization using the mesh vtk-files for the example given in `EXAMPLES/meshfem3D_examples/simple_model/`.](figures/mesh_vp.jpg)
+<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Paraview visualization using the mesh vtk-files for the example given in `EXAMPLES/meshfem3D_examples/simple_model/`.</span></div>
 
-You will see that the mesh contains a doubling layer, where we stitch elements together such that the size of two elements will transition to the size of one element (very useful to keep the ratio of wavespeed / element\_size about constant). Those elements in this doubling layer have higher skewness values and make up those 6 % in the histogram.
+You will see that the mesh contains a doubling layer, where we stitch elements together such that the size of two elements will transition to the size of one element (very useful to keep the ratio of wavespeed / element_size about constant). Those elements in this doubling layer have higher skewness values and make up those 6 % in the histogram.
 
-<span>the code gives following error message “need at least one receiver”:</span>  
+the code gives following error message "need at least one receiver":  
 This means that no stations given in the input file `DATA/STATIONS` could be located within the dimensions of the mesh. This can happen for example when the mesh was created with the in-house mesher `xmeshfem3D` while using the Universal Transverse Mercator (UTM) projection but the simulation with `xspecfem3D` was suppressing this projection from latitude/longitude to x/y/z coordinates.
 
 In such cases, try to change your `DATA/Par_file` and set e.g.:
@@ -78,7 +78,7 @@ to be the same in `Mesh_Par_file` and `Par_file`. This flag should be identical 
 
 The flag determines if the coordinates you specify for your source and station locations are given as lat/lon degrees and must be converted to UTM coordinates. As an example, if you use `.false.` within `Mesh_Par_file` then you create a mesh with `xmeshfem3D` using the UTM projection from lat/lon as input format to UTM projected coordinates to store the mesh point positions, which is fine. The error then may occur if in the `Par_file` you have this set to `.true.` so that the `xgenerate_databases` and `xspecfem3D` suppress the UTM projection and assume that all coordinates you use now for source and receiver locations are given in meters (that is, converted) already. So it won’t find the specified locations in the used mesh. As a solutions, just change the flag in `Par_file` to be the same as in `Mesh_Par_file` and rerun `xgenerate_databases` and `xspecfem3D` to make sure that your simulation works fine.
 
-<span>I get the following error message “forward simulation became unstable and blew up”:</span>  
+I get the following error message "forward simulation became unstable and blew up":  
 In most cases this means that your time step size `DT` is chosen too big. Look at your files `output_mesher.txt` or `output_solver.txt` created in the folder `OUTPUT_FILES`. In these output files, find the section:
 
     ...
@@ -97,5 +97,5 @@ would (most probably) work fine. It could be also bigger than the 0.068 s sugges
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (May 17, 2022)
+> (Oct 26, 2022)
 
