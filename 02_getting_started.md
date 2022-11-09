@@ -15,7 +15,7 @@ Getting Started
 
 To download the SPECFEM3D_Cartesian software package, type this:
 
-    git clone --recursive --branch devel https://github.com/geodynamics/specfem3d.git
+    git clone --recursive --branch devel https://github.com/SPECFEM/specfem3d.git
 
 Then, to configure the software for your system, run the `configure` shell script. This script will attempt to guess the appropriate configuration values for your system. However, at a minimum, it is recommended that you explicitly specify the appropriate command names for your Fortran compiler (another option is to define FC, CC and MPIF90 in your .bash_profile or your .cshrc file):
 
@@ -46,7 +46,7 @@ If you have problems configuring the code on a Cray machine, i.e. for instance i
 `utils/Cray_compiler_information/configure_SPECFEM_for_Piz_Daint.bash`.
 
 On SGI systems, `flags.guess` automatically informs `configure` to insert ‘`‘TRAP_FPE=OFF`’’ into the generated `Makefile` in order to turn underflow trapping off.
-You can add `--enable-vectorization` to the configuration options to speed up the code in the fluid (acoustic) and elastic parts. This works fine if (and only if) your computer always allocates a contiguous memory block for each allocatable array; this is the case for most machines and most compilers, but not all. To disable this feature, use option `--disable-vectorization`. For more details see [github.com/geodynamics/specfem3d/issues/81](https://github.com/geodynamics/specfem3d/issues/81) . To check if that option works fine on your machine, run the code with and without it for an acoustic/elastic model and make sure the seismograms are identical.
+You can add `--enable-vectorization` to the configuration options to speed up the code in the fluid (acoustic) and elastic parts. This works fine if (and only if) your computer always allocates a contiguous memory block for each allocatable array; this is the case for most machines and most compilers, but not all. To disable this feature, use option `--disable-vectorization`. For more details see [github.com/SPECFEM/specfem3d/issues/81](https://github.com/SPECFEM/specfem3d/issues/81) . To check if that option works fine on your machine, run the code with and without it for an acoustic/elastic model and make sure the seismograms are identical.
 Note that we use CUBIT (now called Trelis) to create meshes of hexahedra, but other packages can be used as well, for instance GiD from <http://gid.cimne.upc.es> or Gmsh from <http://geuz.org/gmsh> (Geuzaine and Remacle 2009). Even mesh creation packages that generate tetrahedra, for instance TetGen from <http://tetgen.berlios.de>, can be used because each tetrahedron can then easily be decomposed into four hexahedra as shown in the picture of the TetGen logo at <http://tetgen.berlios.de/figs/Delaunay-Voronoi-3D.gif>; while this approach does not generate hexahedra of optimal quality, it can ease mesh creation in some situations and it has been shown that the spectral-element method can very accurately handle distorted mesh elements (Oliveira and Seriani 2011).
 The SPECFEM3D Cartesian software package relies on the SCOTCH library to partition meshes created with CUBIT. METIS (Karypis and Kumar 1998a, 1998b, 1998c) can also be used instead of SCOTCH if you prefer, by changing the parameter `PARTITIONING_TYPE` in the `Par_file`. You will also then need to install and compile Metis version 4.0 (do \*NOT\* install Metis version 5.0, which has incompatible function calls) and edit `Makefile.in` and uncomment the METIS link flag in that file before running `configure`.
 The SCOTCH library (Pellegrini and Roman 1996) provides efficient static mapping, graph and mesh partitioning routines. SCOTCH is a free software package developed by François Pellegrini et al. from LaBRI and INRIA in Bordeaux, France, downloadable from the web page <https://gitlab.inria.fr/scotch/scotch>. In case no SCOTCH libraries can be found on the system, the configuration will bundle the version provided with the source code for compilation. The path to an existing SCOTCH installation can to be set explicitly with the option `--with-scotch-dir`. Just as an example:
@@ -300,7 +300,7 @@ Becoming a developer of the code, or making small modifications in the source co
 ----------------------------------------------------------------------------------
 
 If you want to develop new features in the code, and/or if you want to make small changes, improvements, or bug fixes, you are very welcome to contribute. To do so, i.e. to access the development branch of the source code with read/write access (in a safe way, no need to worry too much about breaking the package, there are CI tests based on BuildBot, Travis-CI and Jenkins in place that are checking and validating all new contributions and changes), please visit this Web page:
-<https://github.com/geodynamics/specfem3d/wiki>
+<https://github.com/SPECFEM/specfem3d/wiki>
 
 References
 ----------
@@ -322,5 +322,5 @@ Pellegrini, F., and J. Roman. 1996. “SCOTCH: A Software Package for Static Map
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Oct 26, 2022)
+> (Nov  9, 2022)
 
