@@ -23,7 +23,9 @@ Mesh Generation with Split Nodes
 --------------------------------
 
 Faults need to be handled in a special way during mesh generation. A fault surface must lie at the interface between elements (the mesh must honor the fault surfaces). Moreover, a fault is made of two surfaces in contact. Each of these two surfaces needs a separate set of nodes. This approach is known as split nodes. Currently faults can only be run with `xdecompose_mesh` and `CUBIT`. `xmeshfem3D` is not yet ready to handle faults.
+
 To facilitate the mesh generation with split nodes in CUBIT, we need to separate the two fault surfaces by a small distance, effectively creating a tiny opening of the fault (Figure [\[fig:examples.splitnodes\]](#fig:examples.splitnodes), [1.1](#fig:examples.splitnodes-surfacetrace)). Note that the opening distance should not be too small especially in single precision simulations (For example, if your fault is at $y=y_0$ plane, then the opening distance should be at least $10^{-6}y_0$ since single precision can ensure precision within only 7 digits; furthermore, to properly recognize split nodes, the dimension of the mesh also affect numerical roundoffs, and therefore the split nodes should also be at least `10.d-10 * (Xmax-Xmin)` apart). Note that only the interior of the fault must be opened, its edges must remain closed (except the edge on the free surface). The fault is automatically closed later by SPECFEM3D.
+
 Here is an example CUBIT script to generate a mesh with split nodes for a buried vertical strike-slip fault:
 
      reset
@@ -41,15 +43,14 @@ Here is an example CUBIT script to generate a mesh with split nodes for a buried
      node in surf 168 move X 0 Y 0.01 Z 0
      node in surf 160 move X 0 Y -0.01 Z 0
 
-![image](figures/faultmesh.jpg)
-<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
-![image](figures/surf168.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/splitnodes.jpg)
+![image](figures/faultmesh.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/surf168.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/splitnodes.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
 
 ![Screenshots of a CUBIT example showing split nodes for a fault reaching the surface. Surface trace of the fault is shown in orange. Note that the edges of the fault are not split while the interior nodes are offset by a small distance on either side of the fault](figures/splitnodes_surfacetrace.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Screenshots of a CUBIT example showing split nodes for a fault reaching the surface. Surface trace of the fault is shown in orange. Note that the edges of the fault are not split while the interior nodes are offset by a small distance on either side of the fault</span></div>
 
 The CUBIT scripts (\*.jou and \*.py) in the directory `EXAMPLES` generate more complicated meshes. The \*.py files are Python scripts that execute CUBIT commands and use the CUBIT-python interface for SPECFEM3D (see next section). The Python language allows to define and manipulate variables to parameterize the mesh. Alternatively, the Python script can call a CUBIT journal file (\*.jou), which looks like the example above. Variables can be defined and manipulated there using the $\mathtt{APREPRO}$ language built in CUBIT.
+
 Note that you should avoid gaps in the list of indices of mesh objects with the following CUBIT command:
 
     compress ids hex face edge node
@@ -121,7 +122,9 @@ Sign Convention for Fault Quantities
 ------------------------------------
 
 During mesh generation, the fault is defined by two surfaces in contact. Let’s denote as *side 1* the SECOND surface declared by the user in the call to the python function *fault_input*, and the FIRST surface as *side 2*. The local coordinate system on the fault is defined as the right-handed coordinate system defined by (strike, dip, normal), where *normal* is the normal vector outgoing from side 1, *dip* is parallel to the along-dip direction pointing downwards, and *strike* is the horizontal along-strike vector such that the system is right-handed. In places where the fault plane is horizontal, we define the alone strike direction to be (1,0,0).
+
 Slip is defined as displacement on side 2 minus displacement on side 1. In the local coordinate system on the fault, positive along-strike slip is right-lateral and positive along-dip slip is thrust if side 1 is on the hanging wall (normal faulting if side 1 is on the foot wall).
+
 Traction is defined as the stress induced on side 1 by side 2, which is the stress tensor times the normal vector outgoing from side 1. In the local coordinate system on the fault, the normal traction is negative in compression, positive along-strike traction generates right-lateral slip and positive along-dip traction generates thrust slip if side 1 is on the hanging wall (normal faulting if side 1 is on the foot wall).
 
 Input Files
@@ -155,14 +158,13 @@ Line
 NF+6: Slip velocity threshold to define the rupture front. Only used for outputs.
 
 The rest of this file is made of namelist input blocks (see namelist in a Fortran 9x manual). The input for each fault has the following sequence (arguments in \[brackets\] are optional):
-&**RUPTURE_SWITCHES** / RATE_AND_STATE ,TPV16 ,HETE_RSF ,TPV10X ,TWF
-&**BEGIN_FAULT** /
-&**STRESS_TENSOR** Sigma = $\sigma_{xx}$,$\sigma_{yy}$,$\sigma_{zz}$,$\sigma_{xy}$,$\sigma_{xz}$,$\sigma_{yz}$ /
-&**INIT_STRESS** S1, S2, S3 \[,n1, n2, n3\] /
+
+&**RUPTURE_SWITCHES** / RATE_AND_STATE ,TPV16 ,HETE_RSF ,TPV10X ,TWF &**BEGIN_FAULT** / &**STRESS_TENSOR** Sigma = $\sigma_{xx}$,$\sigma_{yy}$,$\sigma_{zz}$,$\sigma_{xy}$,$\sigma_{xz}$,$\sigma_{yz}$ / &**INIT_STRESS** S1, S2, S3 \[,n1, n2, n3\] /
+
 followed by (n1+n2+n3) &**DIST2D** blocks
-&**SWF** mus, mud, dc \[, nmus, nmud, ndc\] (weakening_kind=1 for linear (default); weakening_kind=2 for exponential) /
-&**TWF** nuc_x, nuc_y, nuc_z, nuc_r, nuc_t0, nuc_v /
-&**RSF** V0,f0,a,b,L,V_init,theta_init,C,StateLaw \[ nV0,nf0,na,nb,nL,nV_init,ntheta_init,nC \] /
+
+&**SWF** mus, mud, dc \[, nmus, nmud, ndc\] (weakening_kind=1 for linear (default); weakening_kind=2 for exponential) / &**TWF** nuc_x, nuc_y, nuc_z, nuc_r, nuc_t0, nuc_v / &**RSF** V0,f0,a,b,L,V_init,theta_init,C,StateLaw \[ nV0,nf0,na,nb,nL,nV_init,ntheta_init,nC \] /
+
 followed by (nV0+nf0+na+nb+nL+nV_init+ntheta_init+nC) &**DIST2D** blocks
 
 00.00.0000
@@ -320,7 +322,7 @@ Stations in the fault plane.
 
 **Line 2 to end**: 5 columns: X, Y, Z (-depth), station name, fault-id
 
-The fault-id identifies the fault that contains the station. It is the index of appearance in the faults list after line 2 of Par_file_faults
+The fault-id identifies the fault that contains the station. It is the index of appearance in the faults list after line 2 of `DATA/Par_file_faults`
 
 00.00.0000
 
@@ -328,11 +330,11 @@ Heterogeneous stresses and friction for linear slip weakening friction parameter
 
 00.00.0000
 
-To activate this feature, in Par_file_faults name list &**RUPTURE_SWITCHES**, set TPV16=.TRUE..
+To activate this feature, in `DATA/Par_file_faults` name list &**RUPTURE_SWITCHES**, set TPV16=.TRUE..
 
 00.00.0000
 
-Heterogeneous stresses and friction input for rate and state friction. To activate this feature, in Par_file_faults name list &**RUPTURE_SWITCHES**, set RSF_HETE=.TRUE.. The format of **DATA/rsf_hete_input_file.txt** is as such, in the first line there are four integers that are sequentially documenting the number of divisions along strike, number of divisions along dip, cell size along strike , cell size along dip. Then the following N (N=NumberOfDivisionsAlongStrike \* NumberOfDivisionsAlongDip) lines will document the stress and friction properties on the grid. There are a total of 13 columns.
+Heterogeneous stresses and friction input for rate and state friction. To activate this feature, in `DATA/Par_file_faults` name list &**RUPTURE_SWITCHES**, set RSF_HETE=.TRUE.. The format of **DATA/rsf_hete_input_file.txt** is as such, in the first line there are four integers that are sequentially documenting the number of divisions along strike, number of divisions along dip, cell size along strike , cell size along dip. Then the following N (N=NumberOfDivisionsAlongStrike \* NumberOfDivisionsAlongDip) lines will document the stress and friction properties on the grid. There are a total of 13 columns.
 
 1.  Column1 = Along strike distance(m)
 
@@ -369,11 +371,9 @@ The purpose of the Kelvin-Voigt viscosity in the dynamic fault solver is to damp
 
 1.  Determine the average linear size of the elements on the fault plane, $\mathtt{h\_fault}$. Usually this value is prescribed by the user during mesh generation. Otherwise it can be found by inspection of the mesh inside the CUBIT GUI.
 
-2.  Use the Matlab function $\mathtt{utils/critical\_timestep.m}$ to compute
-    $\mathtt{dtc\_fault}=\mathtt{critical\_timestep\left(c_{p},h\_fault,ngll\right)}$.
-    This is the critical time step in an elastic medium for a hypothetical element of cubic shape with size equal to $\mathtt{h\_fault}$.
+2.  Use the Matlab function $\mathtt{utils/critical\_timestep.m}$ to compute $\mathtt{dtc\_fault}=\mathtt{critical\_timestep\left(c_{p},h\_fault,ngll\right)}$. This is the critical time step in an elastic medium for a hypothetical element of cubic shape with size equal to $\mathtt{h\_fault}$.
 
-3.  Set $\mathtt{eta}$ in $\mathtt{Par\_file\_faults}$ to (0.1 to 0.3)$\ensuremath{\times}\mathtt{dtc\_fault}$. A larger $\mathtt{eta}$ damps high-frequencies more aggressively but it might also affect lower frequencies and rupture speed.
+3.  Set $\mathtt{eta}$ in $\mathtt{DATA/Par\_file\_faults}$ to (0.1 to 0.3)$\ensuremath{\times}\mathtt{dtc\_fault}$. A larger $\mathtt{eta}$ damps high-frequencies more aggressively but it might also affect lower frequencies and rupture speed.
 
 Viscosity reduces numerical stability: the critical timestep in a simulation with Kelvin-Voigt damping needs to be smaller than that in a purely elastic simulation. Here is how to set the time step accordingly:
 
@@ -381,8 +381,7 @@ Viscosity reduces numerical stability: the critical timestep in a simulation wit
 
 2.  Look for the maximum suggested time step in `OUTPUT_FILES/output_mesher.txt`. This is the critical timestep of a purely elastic simulation, $\mathtt{dtc\_bulk}$.
 
-3.  Reset the timestep of the simulation with a Kelvin-Voigt material to a value smaller than
-    $\mathtt{dtc\_kv}=\mathtt{eta}\left(\sqrt{1+\mathtt{dtc\_bulk^{2}}/\mathtt{eta^{2}}}-1\right)$
+3.  Reset the timestep of the simulation with a Kelvin-Voigt material to a value smaller than $\mathtt{dtc\_kv}=\mathtt{eta}\left(\sqrt{1+\mathtt{dtc\_bulk^{2}}/\mathtt{eta^{2}}}-1\right)$
 
 Note that in general $\mathtt{dtc\_bulk}$ is smaller than $\mathtt{dtc\_fault}$, because elements off the fault might be smaller or more distorted than element faces on the fault.
 
@@ -392,6 +391,7 @@ Output Files
 Several output files are saved in `OUTPUT_FILES/`:
 
 1.  Seismograms for each station on the fault plane given in `DATA/FAUL_STATIONS`. One output file is generated for each station, named after the station. The files are ascii and start with a header (22 lines long) followed by a data block with the following format, one line per time sample:
+
     Column 1 = Time (s)
 
     Column 2 = horizontal right-lateral slip (m)
@@ -407,6 +407,7 @@ Several output files are saved in `OUTPUT_FILES/`:
     Column 7 = vertical up-dip shear stress (MPa)
 
     Column 8 = normal stress (MPa)
+
     The stresses are relative to the footwall side of the fault (this convention controls their sign, but not their amplitude). Slip is defined as displacement of the hanging wall relative to the footwall.
 
 2.  Seismograms at stations in the bulk (out of the fault plane) given in `DATA/STATIONS`.
@@ -425,11 +426,13 @@ Post-processing and Visualization
 ---------------------------------
 
 Some Matlab functions for post-processing and visualization are included in directory $\mathtt{utils}$. The functions are internally documented (see their matlab help).
+
 `FSEM3D_snapshot` reads a fault data snapshot
+
 The directories `EXAMPLES/*/post` contain additional Matlab scripts to generate figures specific to each example.
 
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

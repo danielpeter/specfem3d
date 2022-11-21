@@ -13,6 +13,7 @@ Now that you have successfully generated the databases, you are ready to compile
       make xspecfem3D
 
 Please note that `xspecfem3D` must be called directly from the main directory, as most of the binaries of the package.
+
 The solver needs three input files in the `DATA` directory to run:
 
 - **`Par_file`** the main parameter file which was discussed in detail in the previous Chapter [\[cha:Creating-Distributed-Databases\]](#cha:Creating-Distributed-Databases),
@@ -21,25 +22,24 @@ The solver needs three input files in the `DATA` directory to run:
 
 - **`STATIONS`** the stations file.
 
-Most parameters in the `Par_file` should be set prior to running the databases generation. Only the following parameters may be changed after running `xgenerate_databases`:
+Most parameters in the `DATA/Par_file` should be set prior to running the databases generation. Only the following parameters may be changed after running `xgenerate_databases`:
 
 - the simulation type control parameters `SIMULATION_TYPE` and `SAVE_FORWARD`
 
 - the time step parameters `NSTEP` and `DT`
 
-- the absorbing boundary control parameter `PML_CONDITIONS` on condition that the
-  `PML_INSTEAD_OF_FREE_SURFACE` flag remains unmodified after running the databases generation.
+- the absorbing boundary control parameter `PML_CONDITIONS` on condition that the `PML_INSTEAD_OF_FREE_SURFACE` flag remains unmodified after running the databases generation.
 
 - the movie control parameters `MOVIE_SURFACE`, `MOVIE_VOLUME`, and `NTSTEPS_BETWEEN_FRAMES`
 
 - the ShakeMap option `CREATE_SHAKEMAP`
 
-- the output information parameters `MOVIE_TYPE`, `NTSTEP_BETWEEN_OUTPUT_INFO` and
-  `NTSTEP_BETWEEN_OUTPUT_SEISMOS`
+- the output information parameters `MOVIE_TYPE`, `NTSTEP_BETWEEN_OUTPUT_INFO` and `NTSTEP_BETWEEN_OUTPUT_SEISMOS`
 
 - the `PRINT_SOURCE_TIME_FUNCTION` flags
 
-Any other change to the `Par_file` implies rerunning both the database generator `xgenerate_databases` and the solver `xspecfem3D`.
+Any other change to the `DATA/Par_file` implies rerunning both the database generator `xgenerate_databases` and the solver `xspecfem3D`.
+
 For any particular earthquake, the `CMTSOLUTION` file that represents the point source may be obtained directly from the Harvard Centroid-Moment Tensor (CMT) web page . It looks like the example shown in Fig. [1.1](#fig:CMTSOLUTION-file).
 
 ![`CMTSOLUTION` file based on the format from the Harvard CMT catalog. **M** is the moment tensor, $M_{0}$ is the seismic moment, and $M_{w}$ is the moment magnitude.](figures/Hollywood_CMT.jpg)
@@ -47,7 +47,7 @@ For any particular earthquake, the `CMTSOLUTION` file that represents the point 
 
 The `CMTSOLUTION` file should be edited in the following way:
 
-- Set the latitude or UTM $x$ coordinate, longitude or UTM $y$ coordinate, depth of the source (in km). Remark: In principle in the international CMTSOLUTION format in geophysics the depth is given in kilometers; however for users in other fields (non-destructive testing, medical imaging, near-surface studies...) who may prefer to give the position of the source (rather than its depth from the surface), or for people who use FORCESOLUTION to describe the source rather than CMTSOLUTION, we provide an option called USE_SOURCES_RECEIVERS_Z in the Par_file, and if so that position is read from CMTSOLUTION in meters rather than kilometers (and again, it is then the true position in the mesh, not the depth). When option USE_SOURCES_RECEIVERS_Z in the Par_file is on, this remark applies to the position of the receivers as well.
+- Set the latitude or UTM $x$ coordinate, longitude or UTM $y$ coordinate, depth of the source (in km). Remark: In principle in the international CMTSOLUTION format in geophysics the depth is given in kilometers; however for users in other fields (non-destructive testing, medical imaging, near-surface studies...) who may prefer to give the position of the source (rather than its depth from the surface), or for people who use FORCESOLUTION to describe the source rather than CMTSOLUTION, we provide an option called USE_SOURCES_RECEIVERS_Z in the `DATA/Par_file`, and if so that position is read from CMTSOLUTION in meters rather than kilometers (and again, it is then the true position in the mesh, not the depth). When option USE_SOURCES_RECEIVERS_Z in the `DATA/Par_file` is on, this remark applies to the position of the receivers as well.
 
 - Set the `time shift` parameter equal to $0.0$ (the solver will not run otherwise.) The time shift parameter would simply apply an overall time shift to the synthetics, something that can be done in the post-processing (see Section [\[sec:Process-data-and-syn\]](#sec:Process-data-and-syn)).
 
@@ -80,7 +80,7 @@ The `FORCESOLUTION` file should be edited in the following way:
 
 - Set the `time shift` parameter equal to $0.0$ (the solver will not run otherwise.) The time shift parameter would simply apply an overall time shift to the synthetics, something that can be done in the post-processing (see Section [\[sec:Process-data-and-syn\]](#sec:Process-data-and-syn)).
 
-- Set the `f0` parameter (the dominant frequency) of the Ricker source time function (i.e., the second derivative of a Gaussian) when `USE_RICKER_TIME_FUNCTION` is turned on in the main parameter file `Par_file`. In case that the solver uses a (pseudo) Dirac delta source time function to represent a force point source, a very short duration of five time steps is automatically set by default. Note that we use the standard definition of a Ricker, for a dominant frequency $f_0$: $\mathrm{Ricker}(t) = (1 - 2 a t^2) e^{-a t^2}$, with $a = \pi^2 f_0^2$, whose Fourier transform is thus: $\frac{1}{2} \frac{\sqrt{\pi}\omega^2}{a^{3/2}}e^{-\frac{\omega^2}{4 a}}$ This gives the wavelet of Figure [\[fig:RickerWavelet\]](#fig:RickerWavelet).
+- Set the `f0` parameter (the dominant frequency) of the Ricker source time function (i.e., the second derivative of a Gaussian) when `USE_RICKER_TIME_FUNCTION` is turned on in the main parameter file `DATA/Par_file`. In case that the solver uses a (pseudo) Dirac delta source time function to represent a force point source, a very short duration of five time steps is automatically set by default. Note that we use the standard definition of a Ricker, for a dominant frequency $f_0$: $\mathrm{Ricker}(t) = (1 - 2 a t^2) e^{-a t^2}$, with $a = \pi^2 f_0^2$, whose Fourier transform is thus: $\frac{1}{2} \frac{\sqrt{\pi}\omega^2}{a^{3/2}}e^{-\frac{\omega^2}{4 a}}$ This gives the wavelet of Figure [\[fig:RickerWavelet\]](#fig:RickerWavelet).
 
 - Set the latitude or UTM $x$ coordinate, longitude or UTM $y$ coordinate, depth of the source (in km).
 
@@ -88,23 +88,24 @@ The `FORCESOLUTION` file should be edited in the following way:
 
 - Set the components of a (non-unitary) direction vector for the force source in the East/North/Vertical basis (see Appendix A for the orientation of the reference frame).
 
-Where necessary, set a `FORCESOLUTION` file in the same way you configure a `CMTSOLUTION` file with $N_{\mathrm{sources}}$ entries, one for each subevent (i.e., concatenate $N_{\mathrm{sources}}$ `FORCESOLUTION` files to a single `FORCESOLUTION` file). At least one entry (not necessarily the first) must have a zero `time shift`, and all the other entries must have non-negative `time shift`. Each subevent can have its own half latitude, longitude, depth, `half duration` and force parameters.
+Where necessary, set a `FORCESOLUTION` file in the same way you configure a `CMTSOLUTION` file with $N_{\mathrm{sources}}$ entries, one for each subevent (i.e., concatenate $N_{\mathrm{sources}}$ `FORCESOLUTION` files to a single `FORCESOLUTION` file). At least one entry (not necessarily the first) must have a zero `time shift`, and all the other entries must have non-negative `time shift`. Each subevent can have its own latitude, longitude, depth, `half duration` and force parameters.
 
 ![Example of timing for three sources. The center of the first source triangle is defined to be time zero. Note that this is NOT in general the hypocentral time, or the start time of the source (marked as tstart). The parameter `time shift` in the `CMTSOLUTION` file would be t1(=0), t2, t3 in this case, and the parameter `half duration` would be hdur1, hdur2, hdur3 for the sources 1, 2, 3 respectively.](figures/source_timing.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Example of timing for three sources. The center of the first source triangle is defined to be time zero. Note that this is NOT in general the hypocentral time, or the start time of the source (marked as tstart). The parameter `time shift` in the `CMTSOLUTION` file would be t1(=0), t2, t3 in this case, and the parameter `half duration` would be hdur1, hdur2, hdur3 for the sources 1, 2, 3 respectively.</span></div>
 
-In addition to inbuild source time function, the solver can also use an external source time function defined by the user. This option can be activated by setting `EXTERNAL_SOURCE_FILE` to true in `Par_File` and by adding the name of the file containing the source time function at the end of `FORCESOLUTION` or `CMTSOLUTION` files. The source time function file must contain the value of the time step on its first line, and then a single column with the amplitude of the source time function for all the time steps. The time step must be exactly the same as that used for the simulation. Note when the `EXTERNAL_SOURCE_FILE` is set to false then the line with the external source time function file must not appear in the files `FORCESOLUTION` and `CMTSOLUTION` otherwise the solver will exit with an error. When using an external source file, you can still set up the source location and directivity as in the default case. In the FORCESOLUTION file: you set "latorUTM", "longorUTM" and "depth" to define the position of your point source. Then if you want to define a directivity, then change the following lines: "component dir vect source E", "component dir vect source N" and "component dir vect source Z_UP". What you are doing is simply that you define the source position and directivity the same way as in the default case, but in addition you are specifying the path to read in a non-default source time function from an external file.
+In addition to inbuild source time function, the solver can also use an external source time function defined by the user. This option can be activated by setting `USE_EXTERNAL_SOURCE_FILE` to true in `DATA/Par_file` and by adding the name of the file containing the source time function at the end of `FORCESOLUTION` or `CMTSOLUTION` files. The source time function file must contain the value of the time step on its first line, and then a single column with the amplitude of the source time function for all the time steps. The time step must be exactly the same as that used for the simulation. Note when the `EXTERNAL_SOURCE_FILE` is set to false then the line with the external source time function file must not appear in the files `FORCESOLUTION` and `CMTSOLUTION` otherwise the solver will exit with an error. When using an external source file, you can still set up the source location and directivity as in the default case. In the FORCESOLUTION file: you set "latorUTM", "longorUTM" and "depth" to define the position of your point source. Then if you want to define a directivity, then change the following lines: "component dir vect source E", "component dir vect source N" and "component dir vect source Z_UP". What you are doing is simply that you define the source position and directivity the same way as in the default case, but in addition you are specifying the path to read in a non-default source time function from an external file.
 
 The solver can calculate seismograms at any number of stations for basically the same numerical cost, so the user is encouraged to include as many stations as conceivably useful in the `STATIONS` file, which looks like this:
 
-![Sample `STATIONS` file. Station latitude and longitude should be provided in geographical coordinates. The width of the station label should be no more than 32 characters (see `MAX_LENGTH_STATION_NAME` in the `constants.h` file), and the network label should be no more than 8 characters (see `MAX_LENGTH_NETWORK_NAME` in the `constants.h` file).](figures/STATIONS_basin_explained.jpg)
-<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Sample `STATIONS` file. Station latitude and longitude should be provided in geographical coordinates. The width of the station label should be no more than 32 characters (see `MAX_LENGTH_STATION_NAME` in the `constants.h` file), and the network label should be no more than 8 characters (see `MAX_LENGTH_NETWORK_NAME` in the `constants.h` file).</span></div>
+![Sample `STATIONS` file. Station latitude and longitude should be provided in geographical coordinates. The width of the station label should be no more than 32 characters (see `MAX_LENGTH_STATION_NAME` in the `setup/constants.h` file), and the network label should be no more than 8 characters (see `MAX_LENGTH_NETWORK_NAME` in the `setup/constants.h` file).](figures/STATIONS_basin_explained.jpg)
+<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Sample `STATIONS` file. Station latitude and longitude should be provided in geographical coordinates. The width of the station label should be no more than 32 characters (see `MAX_LENGTH_STATION_NAME` in the `setup/constants.h` file), and the network label should be no more than 8 characters (see `MAX_LENGTH_NETWORK_NAME` in the `setup/constants.h` file).</span></div>
 
 Each line represents one station in the following format:
 
     Station Network Latitude(degrees) Longitude(degrees) Elevation(m) burial(m)
 
-The solver `xspecfem3D` filters the list of stations in file `DATA/STATIONS` to exclude stations that are not located within the region given in the `Par_file` (between `LATITUDE_MIN` and `LATITUDE_MAX` and between `LONGITUDE_MIN` and `LONGITUDE_MAX`). The filtered file is called `DATA/STATIONS_FILTERED`. Elevation and burial are generally applicable to geographical regions. Burial is measured down from the top surface.
+The solver `xspecfem3D` filters the list of stations in file `DATA/STATIONS` to exclude stations that are not located within the region given in the `Mesh_Par_file` (between `LATITUDE_MIN` and `LATITUDE_MAX` and between `LONGITUDE_MIN` and `LONGITUDE_MAX`). The filtered file is called `DATA/STATIONS_FILTERED`. Elevation and burial are generally applicable to geographical regions. Burial is measured down from the top surface.
+
 For other problems in other fields (ultrasonic testing, medical imaging etc...), it may be confusing. We generally follow either one of the following procedures for those kind of problems:
 
 - *Procedure 1:* mostly for geophysics, when the top surface is a free surface (topography) and the five other edges of the mesh are absorbing surfaces
@@ -118,7 +119,7 @@ For other problems in other fields (ultrasonic testing, medical imaging etc...),
 
 - *Procedure 2:* useful for other application domains, in which using the absolute $Z$ position of the sources and receivers is more standard than using their depth from the surface
 
-  1.  In principle in the international CMTSOLUTION format in geophysics the depth is given in kilometers; however for users in other fields (non-destructive testing, medical imaging, near-surface studies...) who may prefer to give the position of the source (rather than its depth from the surface), or for people who use FORCESOLUTION to describe the source rather than CMTSOLUTION, we provide an option called USE_SOURCES_RECEIVERS_Z in the Par_file, and if so that position is read from CMTSOLUTION in meters rather than kilometers (and again, it is then the true position in the mesh, not the depth). When option USE_SOURCES_RECEIVERS_Z in the Par_file is on, this remark applies to the position of the receivers as well.
+  1.  In principle in the international CMTSOLUTION format in geophysics the depth is given in kilometers; however for users in other fields (non-destructive testing, medical imaging, near-surface studies...) who may prefer to give the position of the source (rather than its depth from the surface), or for people who use FORCESOLUTION to describe the source rather than CMTSOLUTION, we provide an option called USE_SOURCES_RECEIVERS_Z in the `DATA/Par_file`, and if so that position is read from CMTSOLUTION in meters rather than kilometers (and again, it is then the true position in the mesh, not the depth). When option USE_SOURCES_RECEIVERS_Z in the `DATA/Par_file` is on, this remark applies to the position of the receivers as well.
 
   2.  Let’s say you want to place two receivers at (x1,y1,z1) and (x2,y2,z2). Your STATIONS file should then look like:
 
@@ -129,12 +130,12 @@ For other problems in other fields (ultrasonic testing, medical imaging etc...),
 
   You can replace the station name "BONE" with any word of length less than 32, and the network name "GR" with any word of length less than 8. And you can always plot OUTPUT_FILES/sr.vtk file in ParaView to check the source/receiver locations after your simulation.
 
-Solver output is provided in the `OUTPUT_FILES` directory in the `output_solver.txt` file. Output can be directed to the screen instead by uncommenting a line in `constants.h`:
+Solver output is provided in the `OUTPUT_FILES` directory in the `output_solver.txt` file. Output can be directed to the screen instead by uncommenting a line in `setup/constants.h`:
 
     ! uncomment this to write messages to the screen
     ! integer, parameter :: IMAIN = ISTANDARD_OUTPUT
 
-On PC clusters the seismogram files are generally written to the local disks (the path `LOCAL_PATH` in the `Par_file`) and need to be gathered at the end of the simulation.
+On PC clusters the seismogram files are generally written to the local disks (the path `LOCAL_PATH` in the `DATA/Par_file` and need to be gathered at the end of the simulation.
 
 While the solver is running, its progress may be tracked by monitoring the ‘`timestamp``*`’ files in the `OUTPUT_FILES/` directory. These tiny files look something like this:
 
@@ -145,9 +146,9 @@ While the solver is running, its progress may be tracked by monitoring the ‘`t
     Mean elapsed time per time step in seconds =     0.115328696703911
     Max norm displacement vector U in all slices (m) =     1.0789589E-02
 
-The `timestamp``*` files provide the `Mean elapsed time per time step in seconds`, which may be used to assess performance on various machines (assuming you are the only user on a node), as well as the `Max norm displacement vector U in all slices (m)`. If something is wrong with the model, the mesh, or the source, you will see the code become unstable through exponentially growing values of the displacement and fluid potential with time, and ultimately the run will be terminated by the program. You can control the rate at which the timestamp files are written based upon the parameter `NTSTEP_BETWEEN_OUTPUT_INFO` in the `Par_file`.
+The `timestamp``*` files provide the `Mean elapsed time per time step in seconds`, which may be used to assess performance on various machines (assuming you are the only user on a node), as well as the `Max norm displacement vector U in all slices (m)`. If something is wrong with the model, the mesh, or the source, you will see the code become unstable through exponentially growing values of the displacement and fluid potential with time, and ultimately the run will be terminated by the program. You can control the rate at which the timestamp files are written based upon the parameter `NTSTEP_BETWEEN_OUTPUT_INFO` in the `DATA/Par_file`.
 
-Having set the `Par_file` parameters, and having provided the `CMTSOLUTION` (or the `FORCESOLUTION`) and `STATIONS` files, you are now ready to launch the solver! This is most easily accomplished based upon the `go_solver` script (See Chapter [\[cha:Scheduler\]](#cha:Scheduler) for information about running through a scheduler, e.g., LSF). You may need to edit the last command at the end of the script that invokes the `mpirun` command. The `runall` script compiles and runs both `xgenerate_databases` and `xspecfem3D` in sequence. This is a safe approach that ensures using the correct combination of distributed database output and solver input.
+Having set the `DATA/Par_file` parameters, and having provided the `CMTSOLUTION` (or the `FORCESOLUTION`) and `STATIONS` files, you are now ready to launch the solver! This is most easily accomplished based upon the `go_solver` script (See Chapter [\[cha:Scheduler\]](#cha:Scheduler) for information about running through a scheduler, e.g., LSF). You may need to edit the last command at the end of the script that invokes the `mpirun` command. The `runall` script compiles and runs both `xgenerate_databases` and `xspecfem3D` in sequence. This is a safe approach that ensures using the correct combination of distributed database output and solver input.
 
 It is important to realize that the CPU and memory requirements of the solver are closely tied to choices about attenuation (`ATTENUATION`) and the nature of the model (i.e., isotropic models are cheaper than anisotropic models). We encourage you to run a variety of simulations with various flags turned on or off to develop a sense for what is involved.
 
@@ -165,8 +166,7 @@ When that option is on, of course the number of processor cores used to start th
 
 Figure [1.5](#fig:simultaneous_dir_struct) shows what the directory structure should looks like when simulating multiple earthquakes at ones. All the runs to perform must be placed in directories called `run0001`, `run0002`, `run0003` and so on (with exactly four digits).
 
-- The simulation is launched within the root directory `EXAMPLE_ROOT_DIR`
-  (usually `mpirun -np N ./bin/xspecfem3D`).
+- The simulation is launched within the root directory `EXAMPLE_ROOT_DIR` (usually `mpirun -np N ./bin/xspecfem3D`).
 
 - `DATA` should contain the `Par_file` parameter file with `NUMBER_OF_SIMULTANEOUS_RUNS` as explained in Chapter [\[cha:Creating-Distributed-Databases\]](#cha:Creating-Distributed-Databases).
 
@@ -184,8 +184,10 @@ Note on the viscoelastic model used
 -----------------------------------
 
 The model used is a constant $Q$, thus with no dependence on frequency ($Q(f)$ = constant). See e.g. (Blanc et al. 2016).
+
 However in practice for technical reasons it is approximated based on the sum of different Generalized Zener body mechanisms and thus the code outputs the band in which the approximation is very good, outside of that range it can be less accurate. The logarithmic center of that frequency band is the `ATTENUATION_f0` parameter defined (in Hz) in input file `DATA/Par_file`.
-Regarding attenuation (viscoelasticity), in the Par_file you need to select the number of standard linear solids (N_SLS) to use to mimic a constant $Q$ quality factor. Using N_SLS = 3 is always safe. If (and only if) you know what you are doing, you can try to reduce that in order to reduce the cost of the simulations. Figure [1.6](#fig:selectNSLS) shows values that you can consider using (again, if and only if you know what you are doing). That table has been created by Zhinan Xie using a comparison between results obtained with a truly-constant $Q$ and results obtained with its approximation based on N_SLS standard linear solids. The comparison is performed using the time-frequency misfit and goodness-of-fit criteria proposed by (Kristeková, Kristek, and Moczo 2009). The table is drawn for a dimensionless parameter representing the distance of propagation.
+
+Regarding attenuation (viscoelasticity), in the `setup/constants.h` you need to select the number of standard linear solids (N_SLS) to use to mimic a constant $Q$ quality factor. Using N_SLS = 3 is always safe. If (and only if) you know what you are doing, you can try to reduce that in order to reduce the cost of the simulations. Figure [1.6](#fig:selectNSLS) shows values that you can consider using (again, if and only if you know what you are doing). That table has been created by Zhinan Xie using a comparison between results obtained with a truly-constant $Q$ and results obtained with its approximation based on N_SLS standard linear solids. The comparison is performed using the time-frequency misfit and goodness-of-fit criteria proposed by (Kristeková, Kristek, and Moczo 2009). The table is drawn for a dimensionless parameter representing the distance of propagation.
 
 ![Table showing how you can select a value of N_SLS smaller than 3, if and only if you know what you are doing.](figures/minimum_number_of_SLS_that_can_be_used_in_viscoelastic_simulation.png)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Table showing how you can select a value of N_SLS smaller than 3, if and only if you know what you are doing.</span></div>
@@ -206,5 +208,5 @@ Kristeková, Miriam, Jozef Kristek, and Peter Moczo. 2009. “Time-Frequency Mis
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

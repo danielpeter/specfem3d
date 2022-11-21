@@ -15,20 +15,13 @@ In this section we explain how to change the velocity model used for your simula
 Using external tomographic Earth models
 ---------------------------------------
 
-To implement your own external tomographic model(s), you must provide your own external tomography file(s), and choose between two possible options:
-(1) set in the `Par_file` the model parameter `MODEL = tomo`,
-or for more user control:
-(2) set in the `Par_file` the model parameter `MODEL = default`, define the negative `material_ID` identifier for each element in the file `MESH/materials_file` and use the following format in the file `MESH/nummaterial_velocity_file` when using CUBIT to construct your mesh (see also section [\[subsec:Exporting-the-Mesh\]](#subsec:Exporting-the-Mesh)):
+To implement your own external tomographic model(s), you must provide your own external tomography file(s), and choose between two possible options: (1) set in the `DATA/Par_file` the model parameter `MODEL = tomo`, or for more user control: (2) set in the `DATA/Par_file` the model parameter `MODEL = default`, define the negative `material_ID` identifier for each element in the file `MESH/materials_file` and use the following format in the file `MESH/nummaterial_velocity_file` when using CUBIT to construct your mesh (see also section [\[subsec:Exporting-the-Mesh\]](#subsec:Exporting-the-Mesh)):
 
     domain_ID material_ID tomography elastic file_name 1
 
-where:
-`domain_ID` is 1 for acoustic or 2 for elastic materials,
-`material_ID` a negative, unique identifier (i.e., -1,-2,...),
-`tomography` keyword for tomographic material definition,
-`elastic` keyword for elastic material definition,
-`file_name` the name of the tomography file and 1 a positive unique identifier.
-The external tomographic model is represented by a grid of points with assigned material properties and homogeneous resolution along each spatial direction x, y and z. The ASCII file `file_name` that describe the tomography should be located in the `TOMOGRAPHY_PATH` directory, set in the `Par_file`. The format of the file, as read from `model_tomography.f90` located in the `src/generate_databases` directory, looks like Figure [1.1](#fig:tomography_file), starting with a header information where
+where: `domain_ID` is 1 for acoustic or 2 for elastic materials, `material_ID` a negative, unique identifier (i.e., -1,-2,...), `tomography` keyword for tomographic material definition, `elastic` keyword for elastic material definition, `file_name` the name of the tomography file and 1 a positive unique identifier.
+
+The external tomographic model is represented by a grid of points with assigned material properties and homogeneous resolution along each spatial direction x, y and z. The ASCII file `file_name` that describe the tomography should be located in the `TOMOGRAPHY_PATH` directory, set in the `DATA/Par_file`. The format of the file, as read from `model_tomography.f90` located in the `src/generate_databases` directory, looks like Figure [1.1](#fig:tomography_file), starting with a header information where
 
 `ORIG_X`, `END_X`  
 are, respectively, the coordinates of the initial and final tomographic grid points along the x direction (in the mesh units, e.g., $m$);
@@ -62,7 +55,7 @@ or
     x y z   vp    vs    rho Qp  Qs
     ..
 
-where `x`, `y`, `z` are the grid point position, `vp`, `vs` and `rho` the P- and S-wave speeds and density, and `Qp` and `Qs` the quality factors for P- and S-wave speeds. The quality factors are optional and can be omitted for purely elastic models (the tomography routine will recognize both formats). Internally, the quality factors will be converted to bulk and shear attenuation values, $Q_{\kappa}$ and $Q_{\mu}$ respectively (Anderson and Hart 1978). Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see doc/note_on_Qkappa_versus_Qp.pdf and utils/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90. For simulations with attenuation, please note that the Vp- and Vs-velocities of your model are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` in the main constants file `constants.h` found in subdirectory `src/shared/`.
+where `x`, `y`, `z` are the grid point position, `vp`, `vs` and `rho` the P- and S-wave speeds and density, and `Qp` and `Qs` the quality factors for P- and S-wave speeds. The quality factors are optional and can be omitted for purely elastic models (the tomography routine will recognize both formats). Internally, the quality factors will be converted to bulk and shear attenuation values, $Q_{\kappa}$ and $Q_{\mu}$ respectively (Anderson and Hart 1978). Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see doc/note_on_Qkappa_versus_Qp.pdf and utils/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90. For simulations with attenuation, please note that the Vp- and Vs-velocities of your model are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` defined (in Hz) in input file `DATA/Par_file`.
 
 The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency.
 
@@ -91,7 +84,7 @@ Other more complicated discretizations can be used following the same procedure.
 External (an)elastic Models
 ---------------------------
 
-To use your own external model, you can set in the `Par_file` the model parameter `MODEL = external`. Three-dimensional acoustic and/or (an)elastic (attenuation) models may then be superimposed onto the mesh based upon your subroutine in `model_external_values.f90` located in directory `src/generate_databases`. The call to this routine would be as follows
+To use your own external model, you can set in the `DATA/Par_file` the model parameter `MODEL = external`. Three-dimensional acoustic and/or (an)elastic (attenuation) models may then be superimposed onto the mesh based upon your subroutine in `model_external_values.f90` located in directory `src/generate_databases`. The call to this routine would be as follows
 
     call model_external_values(xmesh, ymesh, zmesh, &
                 rho, vp, vs, qkappa_atten, qmu_atten, iflag_aniso, idomain_id)
@@ -115,12 +108,12 @@ anisotropic model flag, $0$ indicating no anisotropy or $1$ using anisotropic mo
 `idomain_id`  
 domain identifier, $1$ for acoustic, $2$ for elastic, $3$ for poroelastic materials.
 
-Note that the resolution and maximum value of anelastic models are truncated. This speeds the construction of the standard linear solids during the meshing stage. To change the resolution, currently at one significant figure following the decimal, or the maximum value (9000), consult `shared/constants.h`.
+Note that the resolution and maximum value of anelastic models are truncated. This speeds the construction of the standard linear solids during the meshing stage. To change the resolution, currently at one significant figure following the decimal, or the maximum value (9000), consult `setup/constants.h`.
 
 Anisotropic Models
 ------------------
 
-To use your anisotropic models, you can either set in the `Par_file` the model parameter `ANISOTROPY` to `.true.` or set the model parameter `MODEL = aniso`. Three-dimensional anisotropic models may be superimposed on the mesh based upon the subroutine in file `model_aniso.f90` located in directory `src/generate_databases`. The call to this subroutine is of the form
+To use your anisotropic models, you can either set in the `DATA/Par_file` the model parameter `ANISOTROPY` to `.true.` or set the model parameter `MODEL = aniso`. Three-dimensional anisotropic models may be superimposed on the mesh based upon the subroutine in file `model_aniso.f90` located in directory `src/generate_databases`. The call to this subroutine is of the form
 
     call model_aniso(iflag_aniso, rho, vp, vs, &
                      c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
@@ -162,5 +155,5 @@ Anderson, Don L., and R. S. Hart. 1978. “$Q$ of the Earth.” *J. Geophys. Res
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

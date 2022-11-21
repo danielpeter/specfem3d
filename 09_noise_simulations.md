@@ -18,11 +18,17 @@ Input Parameter Files
 ---------------------
 
 As usual, the three main input files are crucial: `Par_file`, `CMTSOLUTION` and `STATIONS`. Unless otherwise specified, those input files should be located in directory `DATA/`.
+
 `CMTSOLUTION` is required for all simulations. At a first glance, it may seem unexpected to have it here, since the noise simulations should have nothing to do with the earthquake – `CMTSOLUTION`. However, for noise simulations, it is critical to have no earthquakes. In other words, the moment tensor specified in `CMTSOLUTION` must be set to zero manually!
+
 `STATIONS` remains the same as in previous earthquake simulations, except that the order of receivers listed in `STATIONS` is now important. The order will be used to determine the ‘main’ receiver, i.e., the one that simultaneously cross correlates with the others.
+
 `Par_file` also requires careful attention. A parameter called `NOISE_TOMOGRAPHY` has been added which specifies the type of simulation to be run. `NOISE_TOMOGRAPHY` is an integer with possible values 0, 1, 2 and 3. For example, when `NOISE_TOMOGRAPHY` equals 0, a regular earthquake simulation will be run. When it is 1/2/3, you are about to run step 1/2/3 of the noise simulations respectively. Should you be confused by the three steps, refer to Tromp et al. (2010) for details.
+
 Another change to `Par_file` involves the parameter `NSTEP`. While for regular earthquake simulations this parameter specifies the length of synthetic seismograms generated, for noise simulations it specifies the length of the seismograms used to compute cross correlations. The actual cross correlations are thus twice this length, i.e., $2 \mathrm{NSTEP}-1$. The code automatically makes the modification accordingly, if `NOISE_TOMOGRAPHY` is not zero.
+
 There are other parameters in `Par_file` which should be given specific values. For instance, since the first two steps for calculating noise sensitivity kernels correspond to forward simulations, `SIMULATION_TYPE` must be 1 when `NOISE_TOMOGRAPHY` equals 1 or 2. Also, we have to reconstruct the ensemble forward wavefields in adjoint simulations, therefore we need to set `SAVE_FORWARD` to `.true.` for the second step, i.e., when `NOISE_TOMOGRAPHY` equals 2. The third step is for kernel constructions. Hence `SIMULATION_TYPE` should be 3, whereas `SAVE_FORWARD` must be `.false.`.
+
 Finally, for most system architectures, please make sure that `LOCAL_PATH` in `Par_file` is in fact local, not globally shared. Because we have to save the wavefields at the earth’s surface at every time step, it is quite problematic to have a globally shared `LOCAL_PATH`, in terms of both disk storage and I/O speed.
 
 Noise Simulations: Step by Step
@@ -84,7 +90,7 @@ Proper parameters in those parameter files are not enough for noise simulations 
 
 ### Simulations
 
-With all of the above done, we can finally launch our simulations. Again, please make sure that the `LOCAL_PATH` in `DATA/Par_file` is not globally shared. It is quite problematic to have a globally shared `LOCAL_PATH`, in terms of both disk storage and speed of I/O (we have to save the wavefields at the earth’s surface at every time step).
+With all of the above done, we can finally launch our simulations. Again, please make sure that the `LOCAL_PATH` in `Par_file` is not globally shared. It is quite problematic to have a globally shared `LOCAL_PATH`, in terms of both disk storage and speed of I/O (we have to save the wavefields at the earth’s surface at every time step).
 
 As discussed in Tromp et al. (2010), it takes three steps/simulations to obtain one contribution of the ensemble sensitivity kernels:
 
@@ -112,19 +118,27 @@ It is better to run the three steps continuously within the same job on a cluste
 
 ### Post-simulation
 
-After those simulations, you have all stuff you need, either in the `OUTPUT_FILES/` or in the directory specified by `LOCAL_PATH` in `DATA/Par_file` (which are most probably on local nodes). Collect whatever you want from the local nodes to your workstation, and then visualize them. This process is the same as what you may have done for regular earthquake simulations. Refer to other chapters if you have problems.
+After those simulations, you have all stuff you need, either in the `OUTPUT_FILES/` or in the directory specified by `LOCAL_PATH` in `Par_file` (which are most probably on local nodes). Collect whatever you want from the local nodes to your workstation, and then visualize them. This process is the same as what you may have done for regular earthquake simulations. Refer to other chapters if you have problems.
+
 Simply speaking, two outputs are the most interesting: the simulated ensemble cross correlations and one contribution of the ensemble sensitivity kernels.
+
 The simulated ensemble cross correlations are obtained after the second simulation (Step 2). Seismograms in `OUTPUT_FILES/` are actually the simulated ensemble cross correlations. Collect them immediately after Step 2, or the Step 3 will overwrite them. Note that we have a ‘main’ receiver specified by `irec_main_noise`, the seismogram at one station corresponds to the cross correlation between that station and the ‘main’. Since the seismograms have three components, we may obtain cross correlations for different components as well, not necessarily the cross correlations between vertical components.
+
 One contribution of the ensemble cross-correlation sensitivity kernels are obtained after Step 3, stored in the `DATA/LOCAL_PATH` on local nodes. The ensemble kernel files are named the same as regular earthquake kernels.
+
 You need to run another three simulations to get the other contribution of the ensemble kernels, using different forward and adjoint sources given in Tromp et al. (2010).
 
 Example
 -------
 
 In order to illustrate noise simulations in an easy way, one example is provided in `EXAMPLES/noise_tomography/`. See `EXAMPLES/noise_tomography/README` for explanations.
+
 Note, however, that they are created for a specific workstation (CLOVER@PRINCETON), which has at least 4 cores with ‘mpif90’ working properly.
+
 If your workstation is suitable, you can run the example in `EXAMPLES/noise_tomography/` using:
+
 `./pre-processing.sh`
+
 Even if this script does not work on your workstation, the procedure it describes is universal. You may review the whole process described in the last section by following the commands in `pre-processing.sh`, which should contain enough explanations for all the commands.
 
 References
@@ -135,5 +149,5 @@ Tromp, Jeroen, Yang Luo, Shravan Hanasoge, and Daniel Peter. 2010. “Noise Cros
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

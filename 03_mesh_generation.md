@@ -43,8 +43,7 @@ For the installation and handling of the CUBIT meshing tool suite, please refer 
 Creates a single block model and assigns elastic material parameters.
 
 `layered_halfspace`  
-Combines two different, elastic material volumes and creates a refinement layer between the two. This example can be compared for validation against the solutions provided in subdirectory
-`VALIDATION_3D_SEM_SIMPLER_LAYER_SOURCE_DEPTH/`.
+Combines two different, elastic material volumes and creates a refinement layer between the two. This example can be compared for validation against the solutions provided in subdirectory `VALIDATION_3D_SEM_SIMPLER_LAYER_SOURCE_DEPTH/`.
 
 `waterlayered_halfspace`  
 Combines an acoustic and elastic material volume as in a schematic marine survey example.
@@ -52,9 +51,7 @@ Combines an acoustic and elastic material volume as in a schematic marine survey
 `tomographic_model`  
 Creates a single block model whose material properties will have to be read in from a tomographic model file during the databases creation by `xgenerate_databases`.
 
-![image](figures/example-homogeneous.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/example-2layers.jpg)
-<div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
-![image](figures/example-water.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/example-tomo.jpg)
+![image](figures/example-homogeneous.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/example-2layers.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/example-water.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/example-tomo.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
 
 In each example subdirectory you will find a `README` file, which explains in a step-by-step tutorial the workflow for the example. Please feel free to contribute your own example to this package through the github repository!
@@ -109,9 +106,9 @@ rho
 density of the material (given in kg/m$^{3}$).
 
 Q  
-quality factor to use in case of a simulation with attenuation turned on. It should be between 1 and 9000. In case no attenuation information is available, it can be set to zero. You can either specify a single Q value, in which case it will be assumed to be pure shear attenuation $Q_{\mu}$, or two separate values for bulk and shear attenuation, $Q_{\kappa}$ and $Q_{\mu}$ respectively. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see doc/note_on_Qkappa_versus_Qp.pdf and utils/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90.
+quality factor to use in case of a simulation with attenuation turned on. It should be between 1 and 9000. In case no attenuation information is available, it can be set to zero. You can either specify a single Q value, in which case it will be assumed to be pure shear attenuation $Q_{\mu}$, or two separate values for bulk and shear attenuation, $Q_{\kappa}$ and $Q_{\mu}$ respectively. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and `utils/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`.
 
-Please note that your Vp- and Vs-speeds are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` in the main constants file `constants.h` found in subdirectory `src/shared/`. The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency.
+Please note that your Vp- and Vs-speeds are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` defined (in Hz) in input file `DATA/Par_file`. The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency.
 
 anisotropic_flag  
 Flag describing the anisotropic model to use in case an anisotropic simulation should be conducted. See the file `model_aniso.f90` in subdirectory `src/generate_databases/` for an implementation of the anisotropic models. In case no anisotropy is available, it can be set to zero.
@@ -176,9 +173,7 @@ absorbing_cpml_file
 
 Note that it does not matter whether an element belongs to a Xmin or to a Xmax CPML, the flag is the same in both cases; the same is true for Ymin and Ymax, and also Zmin and Zmax.
 
-When you have an existing CUBIT (or similar) mesh stored in SPECFEM3D format, i.e., if you have existing `nodes_coords_file` and `mesh_file` files but do not know how to assign CPML flags to them, we have created a small serial Fortran program that will do that automatically for you, i.e., which will create the `absorbing_cpml_file` for you. That program is:
-`utils/CPML/convert_external_layers_of_a_given_mesh_to_CPML_layers.f90`,
-and a small Makefile is provided in that directory (utils/CPML).
+When you have an existing CUBIT (or similar) mesh stored in SPECFEM3D format, i.e., if you have existing `nodes_coords_file` and `mesh_file` files but do not know how to assign CPML flags to them, we have created a small serial Fortran program that will do that automatically for you, i.e., which will create the `absorbing_cpml_file` for you. That program is: `utils/CPML/convert_external_layers_of_a_given_mesh_to_CPML_layers.f90`, and a small Makefile is provided in that directory (utils/CPML).
 
 IMPORTANT: it is your responsibility to make sure that in the input CUBIT (or similar) mesh that this code will read in SPECFEM3D format from files `nodes_coords_file` and `mesh_file` you have created layers of elements that constitute a layer of constant thickness aligned with the coordinate grid axes (X, Y and/or Z), so that this code can assign CPML flags to them. This code does NOT check that (because it cannot, in any easy way). The mesh inside these CPML layers does not need to be structured nor regular, any non-structured mesh is fine as long as it has flat PML inner and outer faces, parallel to the axes, and thus of a constant thickness. The thickness can be different for the X, Y and Z sides. But for X it must not vary, for Y it must not vary, and for Z it must not vary. If you do not know the exact thickness, you can use a slightly LARGER value in this code (say 2% to 5% more) and this code will fix that and will adjust it; never use a SMALLER value otherwise this code will miss some CPML elements.
 
@@ -200,10 +195,9 @@ Defines the material properties.
 
       domain_ID material_ID rho vp vs Qkappa Qmu anisotropy_flag
 
-  where **`domain_ID`** **is 1 for acoustic and 2 for elastic or viscoelastic materials,** `material_ID` a unique identifier, `rho` the density in $kg\, m^{-3}$, `vp` the P-wave speed in $m\, s^{-1}$, `vs` the S-wave speed in $m\, s^{-1}$, `Q` the quality factor and `anisotropy_flag` an identifier for anisotropic models. Note that both `Qkappa` and `Qmu` are ignored by the code unless `ATTENUATION` is set. If you want a model with no `Qmu` attenuation, both set `ATTENUATION` to `.false.` in the `Par_file` and set `Qmu` to 9999 here. If you want a model with no `Qkappa` attenuation, set `Qkappa` to 9999 here. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp.
+  where **`domain_ID`** **is 1 for acoustic and 2 for elastic or viscoelastic materials,** `material_ID` a unique identifier, `rho` the density in $kg\, m^{-3}$, `vp` the P-wave speed in $m\, s^{-1}$, `vs` the S-wave speed in $m\, s^{-1}$, `Q` the quality factor and `anisotropy_flag` an identifier for anisotropic models. Note that both `Qkappa` and `Qmu` are ignored by the code unless `ATTENUATION` is set. If you want a model with no `Qmu` attenuation, both set `ATTENUATION` to `.false.` in the `DATA/Par_file` and set `Qmu` to 9999 here. If you want a model with no `Qkappa` attenuation, set `Qkappa` to 9999 here. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp.
 
-  To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and the helper code
-  `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` in folder `utils/attenuation/`.
+  To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and the helper code `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` in folder `utils/attenuation/`.
 
 - For tomographic velocity models, please read Chapter [\[cha:-Changing-the\]](#cha:-Changing-the) and Section [\[sec:Using-tomographic\]](#sec:Using-tomographic) ‘Using external tomographic Earth models’ for further details.
 
@@ -211,35 +205,25 @@ nodes_coords_file
 Contains the point locations in Cartesian coordinates of the mesh element corners.
 
 mesh_file  
-Contains the mesh element connectivity. The hexahedral elements can have 8 or 27 nodes.
-See picture `doc/mesh_numbering_convention/numbering_convention_27_nodes.jpg` to see
-in which (standard) order the points must be cited. In the case of 8 nodes, just include the first 8 points.
+Contains the mesh element connectivity. The hexahedral elements can have 8 or 27 nodes. See picture `doc/mesh_numbering_convention/numbering_convention_27_nodes.jpg` to see in which (standard) order the points must be cited. In the case of 8 nodes, just include the first 8 points.
 
 free_or_absorbing_surface_file_zmax  
-Contains the free surface connectivity or
-the surface connectivity of the absorbing boundary surface at the top (Zmax),
-depending on whether the top surface is defined as free or absorbing (`STACEY_INSTEAD_OF_FREE_SURFACE` in `DATA/Par_file`).
-You should put both the surface of acoustic regions and of elastic regions in that file; that is, list all the element faces that constitute the surface of the model in that file.
+Contains the free surface connectivity or the surface connectivity of the absorbing boundary surface at the top (Zmax), depending on whether the top surface is defined as free or absorbing (`STACEY_INSTEAD_OF_FREE_SURFACE` in `DATA/Par_file`). You should put both the surface of acoustic regions and of elastic regions in that file; that is, list all the element faces that constitute the surface of the model in that file.
 
 absorbing_surface_file_xmax  
-Contains the surface connectivity of the absorbing boundary surface at Xmax
-(also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
+Contains the surface connectivity of the absorbing boundary surface at Xmax (also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
 
 absorbing_surface_file_xmin  
-Contains the surface connectivity of the absorbing boundary surface at Xmin
-(also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
+Contains the surface connectivity of the absorbing boundary surface at Xmin (also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
 
 absorbing_surface_file_ymax  
-Contains the surface connectivity of the absorbing boundary surface at Ymax
-(also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
+Contains the surface connectivity of the absorbing boundary surface at Ymax (also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
 
 absorbing_surface_file_ymin  
-Contains the surface connectivity of the absorbing boundary surface at Ymin
-(also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
+Contains the surface connectivity of the absorbing boundary surface at Ymin (also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
 
 absorbing_surface_file_bottom  
-Contains the surface connectivity of the absorbing boundary surface at the bottom (Zmin)
-(also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
+Contains the surface connectivity of the absorbing boundary surface at the bottom (Zmin) (also needed in the case of C-PML absorbing conditions, in order for the code to be able to impose Dirichlet conditions on their outer edge).
 
 These mesh files are needed as input files for the partitioner `xdecompose_mesh` to load-balance the mesh. Please see the next section for further details.
 
@@ -255,8 +239,7 @@ In directory "CUBIT_GEOCUBIT/" we provide a script that can help doing the above
 
 #### Checking the mesh quality
 
-The quality of the mesh may be inspected more precisely based upon the serial code in the file `check_mesh_quality_`
-`CUBIT_Abaqus.f90` located in the directory `src/check_mesh_quality_CUBIT_Abaqus/`. Running this code is optional because no information needed by the solver is generated.
+The quality of the mesh may be inspected more precisely based upon the serial code in the file `check_mesh_quality_` `CUBIT_Abaqus.f90` located in the directory `src/check_mesh_quality_CUBIT_Abaqus/`. Running this code is optional because no information needed by the solver is generated.
 
 Prior to running and compiling this code, you have to export your mesh in CUBIT to an ABAQUS (.inp) format. For example, export mesh block IDs belonging to volumes in order to check the quality of the hexahedral elements. You also have to determine a number of parameters of your mesh, such as the number of nodes and number of elements and modify the header of the `check_mesh_quality_CUBIT_Abaqus.f90` source file in directory `src/check_mesh_quality_CUBIT_Abaqus/`.
 
@@ -275,6 +258,7 @@ to generate an OpenDX output file (`DX_mesh_quality.dx`) that can be used to inv
 The SPECFEM3D Cartesian software package performs large scale simulations in a parallel ’Single Process Multiple Data’ way. The spectral-element mesh created with CUBIT needs to be distributed on the processors. This partitioning is executed once and for all prior to the execution of the solver so it is referred to as a static mapping.
 
 An efficient partitioning is important because it leverages the overall running time of the application. It amounts to balance the number of elements in each slice while minimizing the communication costs resulting from the placement of adjacent elements on different processors. `decompose_mesh` depends on the SCOTCH library (Pellegrini and Roman 1996), which provides efficient static mapping, graph and mesh partitioning routines. SCOTCH is a free software package developed by François Pellegrini et al. from LaBRI and INRIA in Bordeaux, France, downloadable from the web page <https://gitlab.inria.fr/scotch/scotch>.
+
 In most cases, the configuration with `./configure FC=ifort` should be sufficient. During the configuration process, the script tries to find existing SCOTCH installations. In case your system has no pre-existing SCOTCH installation, we provide the source code of SCOTCH, which is released open source under the French CeCILL-C version 1 license, in directory `src/decompose_mesh/scotch_5.1.12b`. This version gets bundled with the compilation of the SPECFEM3D Cartesian package if no libraries could have been found. If this automatic compilation of the SCOTCH libraries fails, please refer to file INSTALL.txt in that directory to see further details how to compile it on your system. In case you want to use a pre-existing installation, make sure you have correctly specified the path of the SCOTCH library when using the option `--with-scotch-dir` with the `./configure` script. In the future you should be able to find more recent versions at <http://www.labri.fr/perso/pelegrin/scotch/scotch_en.html>.
 
 ![image](figures/mount-partitions.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/mount-partitions2.jpg)
@@ -286,7 +270,7 @@ When you are ready to compile, in the main directory type
 
 If all paths and flags have been set correctly, the executable `bin/xdecompose_mesh` should be produced.
 
-The partitioning is done in serial for now (in the next release we will provide a parallel version of that code). It needs to be run in the main directory because it expects the `./DATA/Par_file`. The synopsis is:
+The partitioning is done in serial for now (in the next release we will provide a parallel version of that code). It needs to be run in the main directory because it expects the `DATA/Par_file`. The synopsis is:
 
     ./bin/xdecompose_mesh nparts input_directory output_directory
 
@@ -296,7 +280,7 @@ where
 
 - `input_directory` is the directory which holds all the files generated by the Python script `cubit2specfem3d.py` explained in the previous Section [1.1.2](#subsec:Exporting-the-Mesh), e.g. `./MESH/`, and
 
-- `output_directory` is the directory for the output of this partitioner which stores ACII-format files named like `proc``*``*``*``*``*``*``_Database` for each partition. These files will be needed for creating the distributed databases, and have to reside in the directory `LOCAL_PATH` specified in the main `Par_file`, e.g. in directory `./OUTPUT_FILES/DATABASES_MPI`. Please see Chapter [\[cha:Creating-Distributed-Databases\]](#cha:Creating-Distributed-Databases) for further details.
+- `output_directory` is the directory for the output of this partitioner which stores ACII-format files named like `proc``*``*``*``*``*``*``_Database` for each partition. These files will be needed for creating the distributed databases, and have to reside in the directory `LOCAL_PATH` specified in the main `DATA/Par_file`, e.g. in directory `./OUTPUT_FILES/DATABASES_MPI`. Please see Chapter [\[cha:Creating-Distributed-Databases\]](#cha:Creating-Distributed-Databases) for further details.
 
 Note that all the files generated by the Python script `cubit2specfem3d.py` must be placed in the `input_directory` folder before running the program.
 
@@ -313,8 +297,11 @@ In the main directory, type
       make xmeshfem3D
 
 If all paths and flags have been set correctly, the mesher should now compile and produce the executable `bin/xmeshfem3D`. Please note that `xmeshfem3D` must be called directly from the main directory, as most of the binaries of the package.
+
 Input for the mesh generation program is provided through the parameter file `Mesh_Par_file`, which resides in the subdirectory `DATA/meshfem3D_files/`. (To see how to use it, see the EXAMPLES specific to the internal mesher in directory `EXAMPLES/meshfem3D_examples/`.) Before running the mesher, a number of parameters need to be set in the `Mesh_Par_file`. This requires a basic understanding of how the SEM is implemented, and we encourage you to read D. Komatitsch and Vilotte (1998; D. Komatitsch and Tromp 1999) and Dimitri Komatitsch et al. (2004).
+
 The mesher and the solver use UTM coordinates internally, therefore you need to define the zone number for the UTM projection (e.g., zone 11 for Los Angeles). Use decimal values for latitude and longitude (no minutes/seconds). These values are approximate; the mesher will round them off to define a square mesh in UTM coordinates. When running benchmarks on rectangular models, turn the UTM projection off by using the flag `SUPPRESS_UTM_PROJECTION`, in which case all ‘longitude’ parameters simply refer to the $x$ axis, and all ‘latitude’ parameters simply refer to the $y$ axis.
+
 To run the internal mesher for a regional simulation, the following parameters need to be set in the `Mesh_Par_file`:
 
 `LATITUDE_MIN`  
@@ -337,8 +324,7 @@ UTM projection zone in which your model resides, only valid when `SUPPRESS_UTM_P
 
 We use the WGS84 (World Geodetic System 1984) reference ellipsoid for the UTM projection. If you prefer to use the Clarke 1866 ellipsoid, edit file `src/shared/utm_geo.f90`, uncomment that ellipsoid and recompile the code.
 
-From <http://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system>:
-The Universal Transverse Mercator coordinate system was developed by the United States Army Corps of Engineers in the 1940s. The system was based on an ellipsoidal model of Earth. For areas within the contiguous United States the Clarke Ellipsoid of 1866 was used. For the remaining areas of Earth, including Hawaii, the International Ellipsoid was used. The WGS84 ellipsoid is now generally used to model the Earth in the UTM coordinate system, which means that current UTM northing at a given point can be 200+ meters different from the old one. For different geographic regions, other datum systems (e.g.: ED50, NAD83) can be used.
+From <http://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system>: The Universal Transverse Mercator coordinate system was developed by the United States Army Corps of Engineers in the 1940s. The system was based on an ellipsoidal model of Earth. For areas within the contiguous United States the Clarke Ellipsoid of 1866 was used. For the remaining areas of Earth, including Hawaii, the International Ellipsoid was used. The WGS84 ellipsoid is now generally used to model the Earth in the UTM coordinate system, which means that current UTM northing at a given point can be 200+ meters different from the old one. For different geographic regions, other datum systems (e.g.: ED50, NAD83) can be used.
 
 `SUPPRESS_UTM_PROJECTION`  
 set to be `.false.` when your model range is specified in geographical coordinates, and needs to be `.true.` when your model is specified in Cartesian coordinates.
@@ -347,7 +333,9 @@ set to be `.false.` when your model range is specified in geographical coordinat
 File which contains the description of the topography and of the interfaces between the different layers of the model, if any. The number of spectral elements in the vertical direction within each layer is also defined in this file.
 
 `NEX_XI`  
-The number of spectral elements along one side of the block. This number *must* be 8 $\times$ a multiple of $\nprocxi$ defined below. Based upon benchmarks against semi-analytical discrete wavenumber synthetic seismograms (Dimitri Komatitsch et al. 2004), determined that a $\nexxi=288$ run is accurate to a shortest period of roughly 2 s. Therefore, since accuracy is determined by the number of grid points per shortest wavelength, for any particular value of $\nexxi$ the simulation will be accurate to a shortest period determined by $$\mbox{shortest period (s)}=(288/\nexxi)\times2.\label{eq:shortest_period}$$ The number of grid points in each orthogonal direction of the reference element, i.e., the number of Gauss-Lobatto-Legendre points, is determined by `NGLLX` in the `constants.h` file. We generally use $\mbox{\texttt{NGLLX\/}}=5$, for a total of $5^{3}=125$ points per elements. We suggest not to change this value.
+The number of spectral elements along one side of the block. This number *must* be 8 $\times$ a multiple of $\nprocxi$ defined below. Based upon benchmarks against semi-analytical discrete wavenumber synthetic seismograms, (Dimitri Komatitsch et al. 2004) determined that a $\nexxi=288$ run for a 516 km x 507 km mesh is accurate to a shortest period of roughly 2 s. Therefore, since accuracy is determined by the number of grid points per shortest wavelength, for any particular value of $\nexxi$ the simulation with a mesh extent $\Delta$ (in km) will be accurate approximately to a shortest period determined by $$\mbox{shortest period (s)}=2. \times \frac{288}{\nexxi} \times \frac{\Delta}{500km}\label{eq:shortest_period}$$ This estimate also depends on the velocity model. Therefore, the binary `xgenerate_databases` calculates a minimum period resolved by the chosen mesh discretization and velocity model, output into the file `OUTPUT_FILES/output_generate_databases.txt`.
+
+The number of grid points in each orthogonal direction of the reference element, i.e., the number of Gauss-Lobatto-Legendre points, is determined by `NGLLX` in the `setup/constants.h` file. We generally use $\mbox{\texttt{NGLLX\/}}=5$, for a total of $5^{3}=125$ points per elements. We suggest this value as it represents a fair trade-off between element deformations to adapt to topographic variations and numerical accuracy.
 
 `NEX_ETA`  
 The number of spectral elements along the other side of the block. This number *must* be 8 $\times$ a multiple of $\nproceta$ defined below.
@@ -362,13 +350,13 @@ The number of processors or slices along the other side of the block; we must ha
 set to be `.true.` if you want a perfectly regular mesh or `.false.` if you want to add doubling horizontal layers to coarsen the mesh. In this case, you also need to provide additional information by setting up the next three parameters.
 
 `NDOUBLINGS`  
-The number of horizontal doubling layers. Must be set at least to `1` if `USE_REGULAR_MESH` is set to `.true.`. Multiple mesh doublings can be chosen, for which each an `NZ_DOUBLING_**` entry must be given. By default, we only provide two possible entries in the `Mesh_Par_file`. For higher numbers of doubling layers, additional entries must be added.
+The number of horizontal doubling layers. Must be set at least to `1` if `USE_REGULAR_MESH` is set to `.false.`. Multiple mesh doublings can be chosen, for which each an `NZ_DOUBLING_**` entry must be given. By default, we only provide two possible entries in the `Mesh_Par_file`. For higher numbers of doubling layers, additional entries must be added.
 
 `NZ_DOUBLING_1`  
-The position of the first doubling layer (only interpreted if `USE_REGULAR_MESH` is set to `.true.`).
+The position of the first doubling layer (only interpreted if `USE_REGULAR_MESH` is set to `.false.`).
 
 `NZ_DOUBLING_2`  
-The position of the second doubling layer (only interpreted if `USE_REGULAR_MESH` is set to `.true.` and if `NDOUBLINGS` is set to `2`). Doubling layers must be at least `2` layers apart. The layer count starts from the bottom layer. More entries must be listed by the user if `NDOUBLINGS` is larger than `2`.
+The position of the second doubling layer (only interpreted if `USE_REGULAR_MESH` is set to `.false.` and if `NDOUBLINGS` is set to `2`). Doubling layers must be at least `2` layers apart. The layer count starts from the bottom layer. More entries must be listed by the user if `NDOUBLINGS` is larger than `2`.
 
 `CREATE_ABAQUS_FILES`  
 Set this flag to `.true.` to save Abaqus FEA mesh files for subsequent viewing. Turning the flag on generates files in the `LOCAL_PATH` directory. See Section [\[sec:Mesh-graphics\]](#sec:Mesh-graphics) for a discussion of mesh viewing features.
@@ -379,7 +367,7 @@ Set this flag to `.true.` to save OpenDX mesh files for subsequent viewing.
 `LOCAL_PATH`  
 Directory in which the partitions generated by the mesher will be written. Generally one uses a directory on the local disk of the compute nodes, although on some machines these partitions are written on a parallel (global) file system (see also the earlier discussion of the `LOCAL_PATH_IS_ALSO_GLOBAL` flag in Chapter [\[cha:Getting-Started\]](#cha:Getting-Started)).
 
-The mesher generates the necessary partitions in parallel, one set for each of the $\nprocxi\times\nproceta$ slices that constitutes the mesh (see Figure [1.2](#fig:For-parallel-computing)). After the mesher finishes, you can log in to one of the compute nodes and view the contents of the `LOCAL_PATH` directory to see the files generated by the mesher. These files will be needed for creating the distributed databases, and have to reside in the directory `LOCAL_PATH` specified in the main `Par_file`, e.g. in directory `OUTPUT_FILES/DATABASES_MPI`. Please see Chapter [\[cha:Creating-Distributed-Databases\]](#cha:Creating-Distributed-Databases) for further details.
+The mesher generates the necessary partitions in parallel, one set for each of the $\nprocxi\times\nproceta$ slices that constitutes the mesh (see Figure [1.2](#fig:For-parallel-computing)). After the mesher finishes, you can log in to one of the compute nodes and view the contents of the `LOCAL_PATH` directory to see the files generated by the mesher. These files will be needed for creating the distributed databases, and have to reside in the directory `LOCAL_PATH` specified in the main `DATA/Par_file`, e.g. in directory `OUTPUT_FILES/DATABASES_MPI`. Please see Chapter [\[cha:Creating-Distributed-Databases\]](#cha:Creating-Distributed-Databases) for further details.
 
 `NMATERIALS`  
 The number of different materials in your model. In the following lines, each material needs to be defined as:
@@ -409,6 +397,7 @@ For acoustic and elastic material, you would specify
 - `domain_id` : 1=acoustic / 2=elastic / 3=poroelastic
 
 For poroelastic materials, you would specify the corresponding poroelastic properties. Please read the section below for more on poroelastic parameters.
+
 For tomographic models, you would need to specify a negative `material_id` (-1,-2,..) and a corresponding `domain_id` for either acoustic (1) or elastic (2) domains. For example a line like:
 
     -1 tomography elastic tomography_model.xyz 0 2
@@ -435,10 +424,14 @@ The `INTERFACES_FILE` parameter of `Mesh_Par_File` defines the file which contai
 - the name of the file which contains the elevation values (in $y$.$x$ increasing order).
 
 At the end of this file, you simply need to set the number of spectral elements in the vertical direction for each layer. We provide a few models in the `EXAMPLES/` directory.
+
 Now that you have set the appropriate parameters in the `Mesh_Par_file` and have compiled the mesher, you are ready to run it!
+
 Depending on your system, please check how to run executables with MPI. To run the mesher on your cluster, we provide some example scripts for you to modify accordingly in `utils/Cluster/`. For some installations, you might need to provide a file that tells MPI what compute nodes to use for the simulations. In this case, the file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file name is `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher***` and `go_solver**` default job submission scripts provided in directory `utils/Cluster/`. To run the mesher, it is most easily accomplished based upon the `go_mesher***` script. When you run on a PC cluster, the script assumes that the nodes are named `n001`, `n002`, etc. If this is not the case, change the `tr -d ‘n’` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [\[cha:Scheduler\]](#cha:Scheduler) for information about running the code on a system with a scheduler, e.g., LSF.
+
 Mesher output is provided in the `OUTPUT_FILES/` directory in `output_mesher.txt`; this file provides lots of details about the mesh that was generated.
-Please note that the mesher suggests a time step `DT` to run the solver with. The mesher output file also contains a table about the quality of the mesh to indicate possible problems with the distortions of elements. Alternatively, output can be directed to the screen instead by uncommenting a line in `constants.h`:
+
+Please note that the mesher suggests a time step `DT` to run the solver with. The mesher output file also contains a table about the quality of the mesh to indicate possible problems with the distortions of elements. Alternatively, output can be directed to the screen instead by uncommenting a line in `setup/constants.h`:
 
     ! uncomment this to write messages to the screen
     ! integer, parameter :: IMAIN = ISTANDARD_OUTPUT
@@ -451,28 +444,17 @@ Poroelastic materials
 ---------------------
 
 The present version of SPECFEM can handle fully saturated porous simulations. At the moment, the code implements Biot’s equation. However, the code cannot calculate partially saturated cases in its current state.
+
 The way we prescribe material property for porous material in SPECFEM3D depends on wheter the internal mesher `xmeshfem3D` or an external mesher like CUBIT is taken. For external meshers which provide the resulting meshes in a folder like `MESH/`, we use a file `nummaterial_poroelastic_file`, which needs to be added to this directory `MESH/`. The line format for poroelastic materials is as follow:
 
       rhos rhof phi c kxx kxy kxz kyy kyz kzz Ks Kf Kfr etaf mufr
 
-where
-`rho_s` = solid density,
-`rho_f` = fluid density,
-`phi` = porosity,
-`tort` = tortuosity,
-`kxx` = xx component of permeability tensor,
-`kxy` = xy,yx components of permeability tensor,
-`kyy` = yy component of permeability tensor,
-`kxz` = xz,zx components of permeability tensor,
-`kzz` = zz component of permeability tensor,
-`kappa_s` = solid bulk modulus,
-`kappa_f` = fluid bulk modulus,
-`kappa_fr` = frame bulk modulus,
-`eta_f` = fluid viscosity,
-`mu_fr` = frame shear modulus.
+where `rho_s` = solid density, `rho_f` = fluid density, `phi` = porosity, `tort` = tortuosity, `kxx` = xx component of permeability tensor, `kxy` = xy,yx components of permeability tensor, `kyy` = yy component of permeability tensor, `kxz` = xz,zx components of permeability tensor, `kzz` = zz component of permeability tensor, `kappa_s` = solid bulk modulus, `kappa_f` = fluid bulk modulus, `kappa_fr` = frame bulk modulus, `eta_f` = fluid viscosity, `mu_fr` = frame shear modulus.
 
 Using an external mesh (for instance coming from CUBIT/TRELIS), poroelastic materials have the ID number 3, while 1 is acoustic and 2 is elastic (see the example in the package: EXAMPLES/homogeneous_poroelastic).
+
 In case the internal mesher `xmeshfem3D` is used, the same poroelastic material properties will be defined in the `Mesh_Par_file`. See the above section [1.2](#cha:Running-the-Mesher-Meshfem3D) on how the corresponding line format would look like.
+
 Note that attenuation is not implemented yet for poroelastic domains, thus there is no need for specifiying Q values.
 
 References
@@ -489,5 +471,5 @@ Pellegrini, F., and J. Roman. 1996. “SCOTCH: A Software Package for Static Map
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

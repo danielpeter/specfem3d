@@ -19,22 +19,22 @@ In case you used the internal mesher `xmeshfem3D` to create and partition your m
 ![image](figures/vtk_mesh_vp.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/vtk_mesh_vs.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
 
-You have also the option to visualize the distributed databases produced by `xgenerate_databases` using Paraview . For this, you must set the flag `SAVE_MESH_FILES` to `.true.` in the main parameter file `Par_file` (see Chapter [\[cha:Main-Parameter\]](#cha:Main-Parameter) for details). This will create VTK files for each single partition. You can then use Paraview to visualized these partitions.
+You have also the option to visualize the distributed databases produced by `xgenerate_databases` using Paraview . For this, you must set the flag `SAVE_MESH_FILES` to `.true.` in the main parameter file `DATA/Par_file` (see Chapter [\[cha:Main-Parameter\]](#cha:Main-Parameter) for details). This will create VTK files for each single partition. You can then use Paraview to visualized these partitions.
 
 *T*o visualize seismograms with Paraview, you should turn off the flag SU_FORMAT, and turn on the use binary seismograms flag. This will generate .bin files, that you can open with Paraview. You have to select the way you open it ("raw"), and specify the dimensions of the file (NSTEP and NREC).
 
 Movies
 ------
 
-To make a surface or volume movie of the simulation, set parameters `MOVIE_SURFACE`, `MOVIE_VOLUME`, `MOVIE_TYPE`, and `NTSTEP_BETWEEN_FRAMES` in the `Par_file`. Turning on the movie flags, in particular `MOVIE_VOLUME`, produces large output files. `MOVIE_VOLUME` files are saved in the `LOCAL_PATH` directory, whereas `MOVIE_SURFACE` output files are saved in the `OUTPUT_FILES` directory. We save the displacement field if the parameter `SAVE_DISPLACEMENT` is set, otherwise the velocity field is saved. The look of a movie is determined by the half-duration of the source. The half-duration should be large enough so that the movie does not contain frequencies that are not resolved by the mesh, i.e., it should not contain numerical noise. This can be accomplished by selecting a CMT `HALF_DURATION` \> 1.1 $\times$ smallest period (see figure [\[fig:CMTSOLUTION-file\]](#fig:CMTSOLUTION-file)). When `MOVIE_SURFACE` = .`true.`, the half duration of each source in the `CMTSOLUTION` file is replaced by
+To make a surface or volume movie of the simulation, set parameters `MOVIE_SURFACE`, `MOVIE_VOLUME`, `MOVIE_TYPE`, and `NTSTEP_BETWEEN_FRAMES` in the `DATA/Par_file`. Turning on the movie flags, in particular `MOVIE_VOLUME`, produces large output files. `MOVIE_VOLUME` files are saved in the `LOCAL_PATH` directory, whereas `MOVIE_SURFACE` output files are saved in the `OUTPUT_FILES` directory. We save the displacement field if the parameter `SAVE_DISPLACEMENT` is set, otherwise the velocity field is saved. The look of a movie is determined by the half-duration of the source. The half-duration should be large enough so that the movie does not contain frequencies that are not resolved by the mesh, i.e., it should not contain numerical noise. This can be accomplished by selecting a CMT `HALF_DURATION` \> 1.1 $\times$ smallest period (see figure [\[fig:CMTSOLUTION-file\]](#fig:CMTSOLUTION-file)). When `MOVIE_SURFACE` = .`true.`, the half duration of each source in the `CMTSOLUTION` file is replaced by
 
 > $$\sqrt{(}\mathrm{\mathtt{HALF\_DURATIO}\mathtt{N}^{2}}+\mathrm{\mathtt{HDUR\_MOVI}\mathtt{E}^{2}})$$
 
-**NOTE:** If `HDUR_MOVIE` is set to 0.0, the code will select the appropriate value of 1.1 $\times$ smallest period. As usual, for a point source one can set `half duration` in the `CMTSOLUTION` file to be 0.0 and `HDUR_MOVIE` = 0.0 in the `Par_file` to get the highest frequencies resolved by the simulation, but for a finite source one would keep all the `half durations` as prescribed by the finite source model and set `HDUR_MOVIE` = 0.0.
+**NOTE:** If `HDUR_MOVIE` is set to 0.0, the code will select the appropriate value of 1.1 $\times$ smallest period. As usual, for a point source one can set `half duration` in the `CMTSOLUTION` file to be 0.0 and `HDUR_MOVIE` = 0.0 in the `DATA/Par_file` to get the highest frequencies resolved by the simulation, but for a finite source one would keep all the `half durations` as prescribed by the finite source model and set `HDUR_MOVIE` = 0.0.
 
 ### Movie Surface and Shakemaps
 
-When running `xspecfem3D` with the `MOVIE_SURFACE` flag turned on, the code outputs `moviedata??????` files in the `OUTPUT_FILES` directory. There are several flags in the main parameter file `Par_file` that control the output of these movie data files, please see section [\[cha:Main-Parameter\]](#cha:Main-Parameter) for more details. Especially, the following parameters affect the output:
+When running `xspecfem3D` with the `MOVIE_SURFACE` flag turned on, the code outputs `moviedata??????` files in the `OUTPUT_FILES` directory. There are several flags in the main parameter file `DATA/Par_file` that control the output of these movie data files, please see section [\[cha:Main-Parameter\]](#cha:Main-Parameter) for more details. Especially, the following parameters affect the output:
 
 - `SAVE_DISPLACEMENT`: to save displacement instead of velocity,
 
@@ -62,7 +62,7 @@ The `SPECFEM3D Cartesian` code is running in near real-time to produce animation
 
 ### Movie Volume
 
-When running xspecfem3D with the `MOVIE_VOLUME` flag turned on, the code outputs several files in `LOCAL_PATH` specified in the main `Par_file`, e.g. in directory `OUTPUT_FILES/DATABASES_MPI`. The output is saved by each processor at the time interval specified by `NTSTEP_BETWEEN_FRAMES`. For all domains, the either the velocity or displacement field is output to files (depending on setting `SAVE_DISPLACEMENT`):
+When running xspecfem3D with the `MOVIE_VOLUME` flag turned on, the code outputs several files in `LOCAL_PATH` specified in the main `DATA/Par_file`, e.g. in directory `OUTPUT_FILES/DATABASES_MPI`. The output is saved by each processor at the time interval specified by `NTSTEP_BETWEEN_FRAMES`. For all domains, the either the velocity or displacement field is output to files (depending on setting `SAVE_DISPLACEMENT`):
 
     proc??????_velocity_X_it??????.bin
     proc??????_velocity_Y_it??????.bin
@@ -212,5 +212,5 @@ Liu, Qinya, and Jeroen Tromp. 2006. “Finite-Frequency Kernels Based on Adjoint
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

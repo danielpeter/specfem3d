@@ -8,7 +8,7 @@
 Adjoint Simulations
 ===================
 
-Adjoint simulations are generally performed for two distinct applications. First, they can be used in point source moment-tensor inversions, or source imaging for earthquakes with large ruptures such as the Lander’s earthquake (Wald and Heaton 1994). Second, they can be used to generate finite-frequency sensitivity kernels that are a critical part of tomographic inversions based upon 3D reference models (Tromp, Tape, and Liu 2005; Qinya Liu and Tromp 2006; Tromp, Komatitsch, and Liu 2008; Q. Liu and Tromp 2008). In either case, source parameter or velocity structure updates are sought to minimize a specific misfit function (e.g., waveform or traveltime differences), and the adjoint simulation provides a means of computing the gradient of the misfit function and further reducing it in successive iterations. Applications and procedures pertaining to source studies and finite-frequency kernels are discussed in Sections [1.1](#sec:Adjoint-simulation-sources) and [1.2](#sec:Adjoint-simulation-finite), respectively. The two related parameters in the `Par_file` are `SIMULATION_TYPE` (1, 2 or 3) and the `SAVE_FORWARD` (boolean).
+Adjoint simulations are generally performed for two distinct applications. First, they can be used in point source moment-tensor inversions, or source imaging for earthquakes with large ruptures such as the Lander’s earthquake (Wald and Heaton 1994). Second, they can be used to generate finite-frequency sensitivity kernels that are a critical part of tomographic inversions based upon 3D reference models (Tromp, Tape, and Liu 2005; Qinya Liu and Tromp 2006; Tromp, Komatitsch, and Liu 2008; Q. Liu and Tromp 2008). In either case, source parameter or velocity structure updates are sought to minimize a specific misfit function (e.g., waveform or traveltime differences), and the adjoint simulation provides a means of computing the gradient of the misfit function and further reducing it in successive iterations. Applications and procedures pertaining to source studies and finite-frequency kernels are discussed in Sections [1.1](#sec:Adjoint-simulation-sources) and [1.2](#sec:Adjoint-simulation-finite), respectively. The two related parameters in the `DATA/Par_file` are `SIMULATION_TYPE` (1, 2 or 3) and the `SAVE_FORWARD` (boolean).
 
 Adjoint Simulations for Sources Only (not for the Model)
 --------------------------------------------------------
@@ -33,15 +33,13 @@ When a specific misfit function between data and synthetics is minimized to inve
 
     4.  Also note that since time-reversal is done in the code itself, no explicit time-reversing is needed for the preparation of the adjoint sources, i.e., the adjoint sources are in the same forward time sense as the original recorded seismograms.
 
-2.  **Set the related parameters and run the adjoint simulation**
-    In the `DATA/Par_file`, set the two related parameters to be `SIMULATION_TYPE = 2` and `SAVE_FORWARD = .false.`. More conveniently, use the scripts `utils/change_simulation_type.pl` to modify the `Par_file` automatically (`change_simulation_type.pl -a`). Then run the solver to launch the adjoint simulation.
+2.  **Set the related parameters and run the adjoint simulation** In the `DATA/Par_file`, set the two related parameters to be `SIMULATION_TYPE = 2` and `SAVE_FORWARD = .false.`. More conveniently, use the scripts `utils/change_simulation_type.pl` to modify the `DATA/Par_file` automatically (`change_simulation_type.pl -a`). Then run the solver to launch the adjoint simulation.
 
 3.  **Collect the seismograms at the original source location**
 
     After the adjoint simulation has completed successfully, collect the seismograms from `LOCAL_PATH`.
 
-    - These adjoint seismograms are recorded at the locations of the original earthquake sources given by the `DATA/CMTSOLUTION` file, and have names of the form `NT.S?????.S??.sem` for the six-component strain tensor (`SNN,SEE,SZZ,SNE,SNZ,SEZ`) at these locations, and
-      `NT.S?????.BX?.sem` for the three-component displacements (`BXN,BXE,BXZ`) recorded at these locations.
+    - These adjoint seismograms are recorded at the locations of the original earthquake sources given by the `DATA/CMTSOLUTION` file, and have names of the form `NT.S?????.S??.sem` for the six-component strain tensor (`SNN,SEE,SZZ,SNE,SNZ,SEZ`) at these locations, and `NT.S?????.BX?.sem` for the three-component displacements (`BXN,BXE,BXZ`) recorded at these locations.
 
     - `S?????` denotes the source number; for example, if the original `CMTSOLUTION` provides only a point source, then the seismograms collected will start with `S00001`.
 
@@ -54,9 +52,9 @@ Finite-frequency sensitivity kernels are computed in two successive simulations 
 
 1.  **Run a forward simulation with the state variables saved at the end of the simulation**
 
-    Prepare the `CMTSOLUTION` and `STATIONS` files, set the parameters `SIMULATION_TYPE` `=` `1` and `SAVE_FORWARD =` `.true.` in the `Par_file` (`change_simulation_type -F`), and run the solver.
+    Prepare the `CMTSOLUTION` and `STATIONS` files, set the parameters `SIMULATION_TYPE` `=` `1` and `SAVE_FORWARD =` `.true.` in the `DATA/Par_file` (`change_simulation_type -F`), and run the solver.
 
-    - Notice that attenuation is not implemented yet for the computation of finite-frequency kernels; therefore set `ATTENUATION = .false.` in the `Par_file`.
+    - Notice that attenuation is not implemented yet for the computation of finite-frequency kernels; therefore set `ATTENUATION = .false.` in the `DATA/Par_file`.
 
     - We also suggest you modify the half duration of the `CMTSOLUTION` to be similar to the accuracy of the simulation (see Equation [\[eq:shortest_period\]](#eq:shortest_period)) to avoid too much high-frequency noise in the forward wavefield, although theoretically the high-frequency noise should be eliminated when convolved with an adjoint wavefield with the proper frequency content.
 
@@ -80,7 +78,7 @@ Finite-frequency sensitivity kernels are computed in two successive simulations 
 
 3.  **Run the kernel simulation**
 
-    With the successful forward simulation and the adjoint source ready in the `SEM/` directory, set `SIMULATION_TYPE = 3` and `SAVE_FORWARD = .false.` in the `Par_file` (you can use `change_simulation_type.pl -b`), and rerun the solver.
+    With the successful forward simulation and the adjoint source ready in the `SEM/` directory, set `SIMULATION_TYPE = 3` and `SAVE_FORWARD = .false.` in the `DATA/Par_file` (you can use `change_simulation_type.pl -b`), and rerun the solver.
 
     - The adjoint simulation is launched together with the back reconstruction of the original forward wavefield from the state variables saved from the previous forward simulation, and the finite-frequency kernels are computed by the interaction of the reconstructed forward wavefield and the adjoint wavefield.
 
@@ -92,11 +90,9 @@ Finite-frequency sensitivity kernels are computed in two successive simulations 
 
 4.  **Run the anisotropic kernel simulation**
 
-    Instead of the kernels for the isotropic wave speeds, you can also compute the kernels for the 21 independent components $C_{IJ},\, I,J=1,...,6$ (using Voigt’s notation) of the elastic tensor in the cartesian coordinate system. This is done by setting `ANISOTROPIC_KL` `=` `.true.` in `constants.h` before compiling the package. The definition of the parameters $C_{IJ}$ in terms of the corresponding components $c_{ijkl},ijkl,i,j,k,l=1,2,3$ of the elastic tensor in cartesian coordinates follows Chen and Tromp (2007). The 21 anisotropic kernels are saved in the `LOCAL_PATH` in one file with the name of `proc??????_cijkl_kernel.bin` (with `proc??????` the processor number). The output kernels correspond to absolute perturbations $\delta C_{IJ}$ of the elastic parameters and their unit is in $s/GPa/km^{3}$. For consistency, the output density kernels with this option turned on are for a perturbation $\delta\rho$ (and not $\frac{\delta\rho}{\rho}$) and their unit is in s / (kg/m$^{3}$) / km$^{3}$. These ‘primary’ anisotropic kernels can then be combined to obtain the kernels for different parameterizations of anisotropy. This can be done, for example, when combining the kernel files from slices into one mesh file (see Section [\[sec:Finite-Frequency-Kernels\]](#sec:Finite-Frequency-Kernels)).
+    Instead of the kernels for the isotropic wave speeds, you can also compute the kernels for the 21 independent components $C_{IJ},\, I,J=1,...,6$ (using Voigt’s notation) of the elastic tensor in the cartesian coordinate system. This is done by setting `ANISOTROPIC_KL` `=` `.true.` in `DATA/Par_file` before compiling the package. The definition of the parameters $C_{IJ}$ in terms of the corresponding components $c_{ijkl},ijkl,i,j,k,l=1,2,3$ of the elastic tensor in cartesian coordinates follows Chen and Tromp (2007). The 21 anisotropic kernels are saved in the `LOCAL_PATH` in one file with the name of `proc??????_cijkl_kernel.bin` (with `proc??????` the processor number). The output kernels correspond to absolute perturbations $\delta C_{IJ}$ of the elastic parameters and their unit is in $s/GPa/km^{3}$. For consistency, the output density kernels with this option turned on are for a perturbation $\delta\rho$ (and not $\frac{\delta\rho}{\rho}$) and their unit is in s / (kg/m$^{3}$) / km$^{3}$. These ‘primary’ anisotropic kernels can then be combined to obtain the kernels for different parameterizations of anisotropy. This can be done, for example, when combining the kernel files from slices into one mesh file (see Section [\[sec:Finite-Frequency-Kernels\]](#sec:Finite-Frequency-Kernels)).
 
-    If `ANISOTROPIC_KL` `=` `.true.` by additionally setting `ANISOTROPIC_KL` `=` `.true.` in `constants.h` the package will save anisotropic kernels parameterized as velocities related to transverse isotropy based on the the Chen and Tromp parameters Chen and Tromp (2007). The kernels are saved as relative perturbations for horizontal and vertical P and S velocities, $\alpha_{v},\alpha_{h},\beta_{v},\beta_{h}$. Explicit relations can be found in appendix B. of Sieminski et al. (2007)
-
-    The anisotropic kernels are only currently available for CPU mode.
+    If `ANISOTROPIC_KL` `=` `.true.` by additionally setting `SAVE_TRANSVERSE_KL` `=` `.true.` in `DATA/Par_file` the package will save anisotropic kernels parameterized as velocities related to transverse isotropy based on the the Chen and Tromp parameters Chen and Tromp (2007). The kernels are saved as relative perturbations for horizontal and vertical P and S velocities, $\alpha_{v},\alpha_{h},\beta_{v},\beta_{h}$. Explicit relations can be found in appendix B. of Sieminski et al. (2007)
 
 In general, the three steps need to be run sequentially to assure proper access to the necessary files. If the simulations are run through some cluster scheduling system (e.g., LSF), and the forward simulation and the subsequent kernel simulations cannot be assigned to the same set of computer nodes, the kernel simulation will not be able to access the database files saved by the forward simulation. Solutions for this dilemma are provided in Chapter [\[cha:Scheduler\]](#cha:Scheduler). Visualization of the finite-frequency kernels is discussed in Section [\[sec:Finite-Frequency-Kernels\]](#sec:Finite-Frequency-Kernels).
 
@@ -120,5 +116,5 @@ Wald, D. J., and T. H. Heaton. 1994. “Spatial and Temporal Distribution of Sli
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

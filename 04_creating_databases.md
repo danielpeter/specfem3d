@@ -9,8 +9,7 @@
 Creating the Distributed Databases
 ==================================
 
-After using `xmeshfem3D` or `xdecompose_mesh`, the next step in the workflow is to compile `xgenerate_`
-`databases`. This program is going to create all the missing information needed by the SEM solver.
+After using `xmeshfem3D` or `xdecompose_mesh`, the next step in the workflow is to compile `xgenerate_` `databases`. This program is going to create all the missing information needed by the SEM solver.
 
 ![Schematic workflow for a SPECFEM3D Cartesian simulation. The executable `xgenerate_databases` creates the GLL mesh points and assigns specific model parameters.](figures/workflow.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Schematic workflow for a SPECFEM3D Cartesian simulation. The executable `xgenerate_databases` creates the GLL mesh points and assigns specific model parameters.</span></div>
@@ -89,10 +88,10 @@ For a user-specified 3D isotropic model which uses a tomographic model file `tom
 Set to `.true.` if the effect of the oceans on seismic wave propagation should be incorporated based upon the (rough) approximate treatment discussed in Komatitsch and Tromp (2002b). This feature is inexpensive from a numerical perspective, both in terms of memory requirements and CPU time. This approximation is accurate at periods of roughly 20 s and longer. At shorter periods the effect of water phases/reverberations is not taken into account, even when the flag is on. If you want to model the effect of a fluid-solid model at short periods, then set this flag to `.false.` and mesh the fluid layer explicitly in your mesher, so that it is computed accurately and without this approximation.
 
 `TOPOGRAPHY`  
-This feature is only effective if `APPROXIMATE_OCEAN_LOAD` is set to `.true.`. Set to `.true.` if topography and bathymetry should be read in based upon the topography file specified in the main constants file `constants.h` found in subdirectory `src/shared/` to evaluate elevations. If not set, elevations will be read from the numerical mesh.
+This feature is only effective if `APPROXIMATE_OCEAN_LOAD` is set to `.true.`. Set to `.true.` if topography and bathymetry should be read in based upon the topography file specified in the main constants file `setup/constants.h` to evaluate elevations. If not set, elevations will be read from the numerical mesh.
 
 `ATTENUATION`  
-Set to `.true.` if attenuation should be incorporated. Turning this feature on increases the memory requirements significantly (roughly by a factor of 1.5), and is numerically fairly expensive. See Komatitsch and Tromp (1999, 2002a) for a discussion on the implementation of attenuation based upon standard linear solids. Please note that the Vp- and Vs-velocities of your model are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` in the main constants file `constants.h` found in subdirectory `src/shared/`. The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and in folder `utils/attenuation`, the tool `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`.
+Set to `.true.` if attenuation should be incorporated. Turning this feature on increases the memory requirements significantly (roughly by a factor of 1.5), and is numerically fairly expensive. See Komatitsch and Tromp (1999, 2002a) for a discussion on the implementation of attenuation based upon standard linear solids. Please note that the Vp- and Vs-velocities of your model are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` defined (in Hz) in input file `DATA/Par_file`. The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and in folder `utils/attenuation`, the tool `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`.
 
 `ANISOTROPY`  
 Set to `.true.` if you want to use an anisotropy model. Please see the file `model_aniso.f90` in subdirectory `src/generate_databases/` for the current implementation of anisotropic models.
@@ -166,7 +165,7 @@ This parameter specifies the interval at which basic information about a run is 
 `USE_FORCE_POINT_SOURCE`  
 Turn this flag on to use a (tilted) `FORCESOLUTION` force point source instead of a `CMTSOLUTION` moment-tensor source. When the force source does not fall exactly at a grid point, the solver interpolates the force between grid points using Lagrange interpolants. This can be useful e.g. for oil industry foothills simulations in which the source is a vertical force, normal force, tilted force, or an impact etc. Note that in the `FORCESOLUTION` file, you will need to edit the East, North and vertical components of an arbitrary (not necessarily unitary, the code will normalize it automatically) direction vector of the force vector; thus refer to Appendix [\[cha:Coordinates\]](#cha:Coordinates) for the orientation of the reference frame. This vector is made unitary internally in the solver and thus only its direction matters here; its norm is ignored and the norm of the force used is the factor force source times the source time function.
 
-When using this option, by default the code can locate the force source anywhere between mesh points in order to honor its exact location; this is more precise than using the closest GLL mesh point, but it is also a bit slower. If needed, you can change that default behavior and force the code to use the closest GLL mesh point instead by setting flag `USE_BEST_LOCATION` to `.false.` instead of `.true.` in file `src/shared/constants.h.in` and running the `configure` script again and recompiling the code.
+When using this option, by default the code can locate the force source anywhere between mesh points in order to honor its exact location; this is more precise than using the closest GLL mesh point, but it is also a bit slower. If needed, you can change that default behavior and force the code to use the closest GLL mesh point instead by setting flag `USE_BEST_LOCATION` to `.false.` instead of `.true.` in file `setup/constants.h` and recompiling the code.
 
 `USE_RICKER_TIME_FUNCTION`  
 Turn this flag on to use a Ricker source time function, i.e., the second derivative of a Gaussian, instead of the source time functions set by default to represent a (tilted) `FORCESOLUTION` force point source or a `CMTSOLUTION` moment-tensor source. Note that we use the standard definition of a Ricker, for a dominant frequency $f_0$: $\mathrm{Ricker}(t) = (1 - 2 a t^2) e^{-a t^2}$, with $a = \pi^2 f_0^2$, whose Fourier transform is thus: $\frac{1}{2} \frac{\sqrt{\pi}\omega^2}{a^{3/2}}e^{-\frac{\omega^2}{4 a}}$ This gives the wavelet of Figure [1.2](#fig:RickerWavelet).
@@ -189,7 +188,7 @@ adds the ability to run several calculations (several earthquakes) in an embarra
 
 To turn that option on, set parameter `NUMBER_OF_SIMULTANEOUS_RUNS` to a value greater than 1. To implement that, we create `NUMBER_OF_SIMULTANEOUS_RUNS` MPI sub-communicators, each of them being labeled `my_local_mpi_comm_world`, and we use them in all the routines in "src/shared/parallel.f90", except in MPI_ABORT() because in that case we need to kill the entire run.
 
-When that option is on, of course the number of processor cores used to start the code in the batch system must be a multiple of `NUMBER_OF_SIMULTANEOUS_RUNS`, all the individual runs must use the same number of processor cores, which as usual is NPROC in the Par_file, and thus the total number of processor cores to request from the batch system should be `NUMBER_OF_SIMULTANEOUS_RUNS` \* `NPROC`. All the runs to perform must be placed in directories called run0001, run0002, run0003 and so on (with exactly four digits).
+When that option is on, of course the number of processor cores used to start the code in the batch system must be a multiple of `NUMBER_OF_SIMULTANEOUS_RUNS`, all the individual runs must use the same number of processor cores, which as usual is NPROC in the `DATA/Par_file`, and thus the total number of processor cores to request from the batch system should be `NUMBER_OF_SIMULTANEOUS_RUNS` \* `NPROC`. All the runs to perform must be placed in directories called run0001, run0002, run0003 and so on (with exactly four digits).
 
 Imagine you have 10 independent calculations to do, each of them on 100 cores; you have three options:
 
@@ -228,7 +227,7 @@ Turn this flag on to read and write forward arrays using ADIOS.
 `ADIOS_FOR_KERNELS`  
 Turn this flag on to produce ADIOS kernels that can later be visualized with the ADIOS version of combine_vol_data.
 
-There are quite a few more parameters to change the default setup of your runs. Please check the comments in the `Par_file` directly for further explanations.
+There are quite a few more parameters to change the default setup of your runs. Please check the comments in the `DATA/Par_file` directly for further explanations.
 
 ### PML absorbing boundary layers
 
@@ -253,10 +252,9 @@ The parameter `DT` sets the length of each time step in seconds. The value of th
 
 $\Delta t<C \mathrm{min}_{\Omega}( h/v )$
 
-where $C$ is the so-called Courant number and $\Omega$ denotes the model volume. The distance $h$ depends on the mesh element size and the number of GLL points `NGLL` specified in the main constants file `constants.h` located in the `src/shared/` subdirectory. The wave speed $v$ is determined based on your model’s P- (or S-) wave speed values.
+where $C$ is the so-called Courant number and $\Omega$ denotes the model volume. The distance $h$ depends on the mesh element size and the number of GLL points `NGLL` specified in the main constants file `setup/constants.h`. The wave speed $v$ is determined based on your model’s P- (or S-) wave speed values.
 
-The database generator `xgenerate_databases`, as well as the internal mesher `xmeshfem3D`, are trying to evaluate the value of $\Delta t$ for empirically chosen Courant numbers $C\sim0.3$. If you used the mesher `xmeshfem3D` to generate your mesh, you should set the value suggested in `OUTPUT_FILES/output_mesher.txt` file, which is created after the mesher completed. In case you used CUBIT to create the mesh, you might use an arbitrary value when running `xgenerate_databases` and then use the value suggested in the
-`OUTPUT_FILES/output_mesher.txt` file after the database generation completed. Note that the implemented Newmark time scheme uses this time step globally, thus your simulations become more expensive for very small mesh elements in high wave-speed regions. Please be aware of this restriction when constructing your mesh in Chapter [\[cha:Mesh-Generation\]](#cha:Mesh-Generation).
+The database generator `xgenerate_databases`, as well as the internal mesher `xmeshfem3D`, are trying to evaluate the value of $\Delta t$ for empirically chosen Courant numbers $C\sim0.3$. If you used the mesher `xmeshfem3D` to generate your mesh, you should set the value suggested in `OUTPUT_FILES/output_mesher.txt` file, which is created after the mesher completed. In case you used CUBIT to create the mesh, you might use an arbitrary value when running `xgenerate_databases` and then use the value suggested in the `OUTPUT_FILES/output_mesher.txt` file after the database generation completed. Note that the implemented Newmark time scheme uses this time step globally, thus your simulations become more expensive for very small mesh elements in high wave-speed regions. Please be aware of this restriction when constructing your mesh in Chapter [\[cha:Mesh-Generation\]](#cha:Mesh-Generation).
 
 References
 ----------
@@ -274,5 +272,5 @@ Olsen, K. B., S. M. Day, and C. R. Bradley. 2003. “Estimation of $Q$ for Long-
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 

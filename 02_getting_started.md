@@ -42,13 +42,16 @@ When compiling on an IBM machine with the `xlf` and `xlc` compilers, we suggest 
 
     ./configure FC=xlf90_r MPIFC=mpif90 CC=xlc_r CFLAGS="-O3 -q64" FCFLAGS="-O3 -q64" -with-scotch-dir=...
 
-If you have problems configuring the code on a Cray machine, i.e. for instance if you get an error message from the `configure` script, try exporting these two variables: `MPI_INC=$``CRAY_MPICH2_DIR``/include and FCLIBS=" "`, and for more details if needed you can refer to the `utils/Cray_compiler_information` directory. You can also have a look at the configure script called:
-`utils/Cray_compiler_information/configure_SPECFEM_for_Piz_Daint.bash`.
+If you have problems configuring the code on a Cray machine, i.e. for instance if you get an error message from the `configure` script, try exporting these two variables: `MPI_INC=$``CRAY_MPICH2_DIR``/include and FCLIBS=" "`, and for more details if needed you can refer to the `utils/Cray_compiler_information` directory. You can also have a look at the configure script called: `utils/Cray_compiler_information/configure_SPECFEM_for_Piz_Daint.bash`.
 
 On SGI systems, `flags.guess` automatically informs `configure` to insert ‘`‘TRAP_FPE=OFF`’’ into the generated `Makefile` in order to turn underflow trapping off.
+
 You can add `--enable-vectorization` to the configuration options to speed up the code in the fluid (acoustic) and elastic parts. This works fine if (and only if) your computer always allocates a contiguous memory block for each allocatable array; this is the case for most machines and most compilers, but not all. To disable this feature, use option `--disable-vectorization`. For more details see [github.com/SPECFEM/specfem3d/issues/81](https://github.com/SPECFEM/specfem3d/issues/81) . To check if that option works fine on your machine, run the code with and without it for an acoustic/elastic model and make sure the seismograms are identical.
+
 Note that we use CUBIT (now called Trelis) to create meshes of hexahedra, but other packages can be used as well, for instance GiD from <http://gid.cimne.upc.es> or Gmsh from <http://geuz.org/gmsh> (Geuzaine and Remacle 2009). Even mesh creation packages that generate tetrahedra, for instance TetGen from <http://tetgen.berlios.de>, can be used because each tetrahedron can then easily be decomposed into four hexahedra as shown in the picture of the TetGen logo at <http://tetgen.berlios.de/figs/Delaunay-Voronoi-3D.gif>; while this approach does not generate hexahedra of optimal quality, it can ease mesh creation in some situations and it has been shown that the spectral-element method can very accurately handle distorted mesh elements (Oliveira and Seriani 2011).
-The SPECFEM3D Cartesian software package relies on the SCOTCH library to partition meshes created with CUBIT. METIS (Karypis and Kumar 1998a, 1998b, 1998c) can also be used instead of SCOTCH if you prefer, by changing the parameter `PARTITIONING_TYPE` in the `Par_file`. You will also then need to install and compile Metis version 4.0 (do \*NOT\* install Metis version 5.0, which has incompatible function calls) and edit `Makefile.in` and uncomment the METIS link flag in that file before running `configure`.
+
+The SPECFEM3D Cartesian software package relies on the SCOTCH library to partition meshes created with CUBIT. METIS (Karypis and Kumar 1998a, 1998b, 1998c) can also be used instead of SCOTCH if you prefer, by changing the parameter `PARTITIONING_TYPE` in the `DATA/Par_file`. You will also then need to install and compile Metis version 4.0 (do \*NOT\* install Metis version 5.0, which has incompatible function calls) and edit `Makefile.in` and uncomment the METIS link flag in that file before running `configure`.
+
 The SCOTCH library (Pellegrini and Roman 1996) provides efficient static mapping, graph and mesh partitioning routines. SCOTCH is a free software package developed by François Pellegrini et al. from LaBRI and INRIA in Bordeaux, France, downloadable from the web page <https://gitlab.inria.fr/scotch/scotch>. In case no SCOTCH libraries can be found on the system, the configuration will bundle the version provided with the source code for compilation. The path to an existing SCOTCH installation can to be set explicitly with the option `--with-scotch-dir`. Just as an example:
 
       ./configure FC=ifort MPIFC=mpif90 --with-scotch-dir=/opt/scotch
@@ -58,10 +61,15 @@ If you use the Intel ifort compiler to compile the code, we recommend that you u
       ./configure CC=icc FC=ifort MPIFC=mpif90
 
 When compiling the SCOTCH source code, if you get a message such as: "ld: cannot find -lz", the Zlib compression development library is probably missing on your machine and you will need to install it or ask your system administrator to do so. On Linux machines the package is often called "zlib1g-dev" or similar. (thus "sudo apt-get install zlib1g-dev" would install it)
+
 To compile a serial version of the code for small meshes that fits on one compute node and can therefore be run serially, run `configure` with the `--without-mpi` option to suppress all calls to MPI.
+
 For people who would like to run the package on Windows rather than on Unix machines, you can install Docker or VirtualBox (installing a Linux in VirtualBox in that latter case) and run it easily from inside that.
+
 We recommend that you add `ulimit -S -s unlimited` to your `.bash_profile` file and/or `limit stacksize unlimited ` to your `.cshrc` file to suppress any potential limit to the size of the Unix stack.
+
 Beware that some cluster systems that run a recent version may not run and/compile an older version of the code.
+
 When using dynamic fault in parallel with the developer version, we suggest you to set the configuration parameters of `FAULT_DISPL_VELOC` and `FAULT_SYNCHRONIZE_ACCEL` as `.true.`.
 
 Using the GPU version of the code
@@ -91,6 +99,7 @@ So even if you have the new CUDA toolkit version 11, but you want to run on say 
       ./configure --with-cuda=cuda5
 
 The compilation with the cuda5 setting chooses then the right architecture (`-gencode=arch=compute_35,code=sm_35` for K20 cards).
+
 The same applies to compilation for AMD cards with HIP:
 
       ./configure --with-hip ..
@@ -113,7 +122,7 @@ Regular POSIX I/O can be problematic when dealing with large simulations on larg
 
 1.  Install ADIOS (available from <https://www.olcf.ornl.gov/center-projects/adios/>). Make sure that your environment variables reference it.
 
-2.  You may want to change ADIOS related values in the `constants.h.in` file. The default values probably suit most cases.
+2.  You may want to change ADIOS related values in the `setup/constants.h` file. The default values probably suit most cases.
 
 3.  Configure using the `--with-adios` flag.
 
@@ -123,11 +132,13 @@ Adding OpenMP support in addition to MPI
 ----------------------------------------
 
 OpenMP support can be enabled in addition to MPI. However, in many cases performance will not improve because our pure MPI implementation is already heavily optimized and thus the resulting code will in fact be slightly slower. A possible exception could be IBM BlueGene-type architectures.
+
 To enable OpenMP, add the flag `--enable-openmp` to the configuration:
 
     ./configure --enable-openmp ..
 
 This will add the corresponding OpenMP flag for the chosen Fortran compiler.
+
 The DO-loop using OpenMP threads has a SCHEDULE property. The `OMP_SCHEDULE` environment variable can set the scheduling policy of that DO-loop. Tests performed by Marcin Zielinski at SARA (The Netherlands) showed that often the best scheduling policy is DYNAMIC with the size of the chunk equal to the number of OpenMP threads, but most preferably being twice as the number of OpenMP threads (thus chunk size = 8 for 4 OpenMP threads etc). If `OMP_SCHEDULE` is not set or is empty, the DO-loop will assume generic scheduling policy, which will slow down the job quite a bit.
 
 Configuration summary
@@ -148,12 +159,13 @@ Some systems require this flag to link to MPI libraries.
 Compiler flags.
 
 The configuration script automatically creates for each executable a corresponding `Makefile` in the `src/` subdirectory. The `Makefile` contains a number of suggested entries for various compilers, e.g., Portland, Intel, Absoft, NAG, and Lahey. The software has run on a wide variety of compute platforms, e.g., various PC clusters and machines from Sun, SGI, IBM, Compaq, and NEC. Select the compiler you wish to use on your system and choose the related optimization flags. Note that the default flags in the `Makefile` are undoubtedly not optimal for your system, so we encourage you to experiment with these flags and to solicit advice from your systems administrator. Selecting the right compiler and optimization flags can make a tremendous difference in terms of performance. We welcome feedback on your experience with various compilers and flags.
-Now that you have set the compiler information, you need to select a number of flags in the `constants.h` file depending on your system:
+
+Now that you have set the compiler information, you need to select a number of flags in the `setup/constants.h` file depending on your system:
 
 `LOCAL_PATH_IS_ALSO_GLOBAL`  
 Set to `.false.` on most cluster applications. For reasons of speed, the (parallel) distributed database generator typically writes a (parallel) database for the solver on the local disks of the compute nodes. Some systems have no local disks, e.g., BlueGene or the Earth Simulator, and other systems have a fast parallel file system, in which case this flag should be set to `.true.`. Note that this flag is not used by the database generator or the solver; it is only used for some of the post-processing.
 
-The package can run either in single or in double precision mode. The default is single precision because for almost all calculations performed using the spectral-element method using single precision is sufficient and gives the same results (i.e. the same seismograms); and the single precision code is faster and requires exactly half as much memory. Select your preference by selecting the appropriate setting in the `constants.h` file:
+The package can run either in single or in double precision mode. The default is single precision because for almost all calculations performed using the spectral-element method using single precision is sufficient and gives the same results (i.e. the same seismograms); and the single precision code is faster and requires exactly half as much memory. Select your preference by selecting the appropriate setting in the `setup/constants.h` file:
 
 `CUSTOM_REAL`  
 Set to `SIZE_REAL` for single precision and `SIZE_DOUBLE` for double precision.
@@ -164,19 +176,23 @@ In the `precision.h` file:
 Set to `MPI_REAL` for single precision and `MPI_DOUBLE_PRECISION` for double precision.
 
 On many current processors (e.g., Intel, AMD, IBM Power), single precision calculations are significantly faster; the difference can typically be 10% to 25%. It is therefore better to use single precision. What you can do once for the physical problem you want to study is run the same calculation in single precision and in double precision on your system and compare the seismograms. If they are identical (and in most cases they will), you can select single precision for your future runs.
+
 If your compiler has problems with the `use mpi` statements that are used in the code, use the script called `replace_use_mpi_with_include_mpif_dot_h.pl` in the root directory to replace all of them with `include ’mpif.h’` automatically.
 
 Compiling on an IBM BlueGene
 ----------------------------
 
 Installation instructions for IBM BlueGene (from April 2013):
+
 Edit file `flags.guess` and put this for `FLAGS_CHECK`:
 
     -g -qfullpath -O2 -qsave -qstrict -qtune=qp -qarch=qp -qcache=auto -qhalt=w
     -qfree=f90 -qsuffix=f=f90 -qlanglvl=95pure -Q -Q+rank,swap_all -Wl,-relax
 
 The most relevant are the -qarch and -qtune flags, otherwise if these flags are set to “auto” then they are wrongly assigned to the architecture of the frond-end node, which is different from that on the compute nodes. You will need to set these flags to the right architecture for your BlueGene compute nodes, which is not necessarily “qp”; ask your system administrator. On some machines if is necessary to use -O2 in these flags instead of -O3 due to a compiler bug of the XLF version installed. We thus suggest to first try -O3, and then if the code does not compile or does not run fine then switch back to -O2. The debug flags (-g, -qfullpath) do not influence performance but are useful to get at least some insights in case of problems.
+
 Before running `configure`, select the XL Fortran compiler by typing `module load bgq-xl/1.0` or `module load bgq-xl` (another, less efficient option is to load the GNU compilers using `module load bgq-gnu/4.4.6` or similar).
+
 Then, to configure the code, type this:
 
     ./configure FC=bgxlf90_r MPIFC=mpixlf90_r CC=bgxlc_r LOCAL_PATH_IS_ALSO_GLOBAL=true
@@ -184,6 +200,7 @@ Then, to configure the code, type this:
 In order for the SCOTCH domain decomposer to compile, on some (but not all) Blue Gene systems you may need to run `configure` with `CC=gcc` instead of `CC=bgxlc_r`.
 
 *Older installation instruction for IBM BlueGene, from 2011:*
+
 To compile the code on an IBM BlueGene, Laurent Léger from IDRIS, France, suggests the following: compile the code with
 
     FLAGS_CHECK="-O3 -qsave -qstrict -qtune=auto -qarch=450d -qcache=auto \
@@ -217,8 +234,7 @@ To do your own call graphs, you can follow these simple steps below.
 
 1.  Run in the terminal : `doxygen -g`, which creates a `Doxyfile` that tells doxygen what you want it to do.
 
-2.  Edit the Doxyfile. Two Doxyfile-type files have been already committed in the directory
-    `specfem3d/doc/Call_trees`:
+2.  Edit the Doxyfile. Two Doxyfile-type files have been already committed in the directory `specfem3d/doc/Call_trees`:
 
     - `Doxyfile_truncated_call_tree` will generate call graphs with maximum 3 or 4 levels of tree structure,
 
@@ -299,8 +315,7 @@ Finally, some useful links:
 Becoming a developer of the code, or making small modifications in the source code
 ----------------------------------------------------------------------------------
 
-If you want to develop new features in the code, and/or if you want to make small changes, improvements, or bug fixes, you are very welcome to contribute. To do so, i.e. to access the development branch of the source code with read/write access (in a safe way, no need to worry too much about breaking the package, there are CI tests based on BuildBot, Travis-CI and Jenkins in place that are checking and validating all new contributions and changes), please visit this Web page:
-<https://github.com/SPECFEM/specfem3d/wiki>
+If you want to develop new features in the code, and/or if you want to make small changes, improvements, or bug fixes, you are very welcome to contribute. To do so, i.e. to access the development branch of the source code with read/write access (in a safe way, no need to worry too much about breaking the package, there are CI tests based on BuildBot, Travis-CI and Jenkins in place that are checking and validating all new contributions and changes), please visit this Web page: <https://github.com/SPECFEM/specfem3d/wiki>
 
 References
 ----------
@@ -322,5 +337,5 @@ Pellegrini, F., and J. Roman. 1996. “SCOTCH: A Software Package for Static Map
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov  9, 2022)
+> (Nov 21, 2022)
 
