@@ -163,20 +163,20 @@ This parameter specifies the interval at which basic information about a run is 
 &nbsp;
 
 `USE_FORCE_POINT_SOURCE`  
-Turn this flag on to use a (tilted) `FORCESOLUTION` force point source instead of a `CMTSOLUTION` moment-tensor source. When the force source does not fall exactly at a grid point, the solver interpolates the force between grid points using Lagrange interpolants. This can be useful e.g. for oil industry foothills simulations in which the source is a vertical force, normal force, tilted force, or an impact etc. Note that in the `FORCESOLUTION` file, you will need to edit the East, North and vertical components of an arbitrary (not necessarily unitary, the code will normalize it automatically) direction vector of the force vector; thus refer to Appendix [\[cha:Coordinates\]](#cha:Coordinates) for the orientation of the reference frame. This vector is made unitary internally in the solver and thus only its direction matters here; its norm is ignored and the norm of the force used is the factor force source times the source time function.
+Turn this flag on to use a (tilted) `FORCESOLUTION` force point source instead of a `CMTSOLUTION` moment-tensor source. When the force source does not fall exactly at a grid point, the solver interpolates the force between grid points using Lagrange interpolants. This can be useful e.g. for oil industry foothills simulations in which the source is a vertical force, normal force, tilted force, or an impact etc. Note that in the `FORCESOLUTION` file, you will need to edit the East, North and vertical components of an arbitrary (not necessarily unitary, the code will normalize it automatically) direction vector of the force vector; thus refer to Appendix [\[cha:Coordinates\]](#cha:Coordinates) for the orientation of the reference frame. This vector is made unitary internally in the solver and thus only its direction matters here; its norm is ignored and the norm of the force used is the factor force source times the source-time function.
 
-When using this option, by default the code can locate the force source anywhere between mesh points in order to honor its exact location; this is more precise than using the closest GLL mesh point, but it is also a bit slower. If needed, you can change that default behavior and force the code to use the closest GLL mesh point instead by setting flag `USE_BEST_LOCATION` to `.false.` instead of `.true.` in file `setup/constants.h` and recompiling the code.
+When using this option, by default the code can locate the force source anywhere between mesh points in order to honor its exact location; this is more precise than using the closest GLL mesh point, but it is also a bit slower.
 
 `USE_RICKER_TIME_FUNCTION`  
-Turn this flag on to use a Ricker source time function, i.e., the second derivative of a Gaussian, instead of the source time functions set by default to represent a (tilted) `FORCESOLUTION` force point source or a `CMTSOLUTION` moment-tensor source. Note that we use the standard definition of a Ricker, for a dominant frequency $f_0$: $\mathrm{Ricker}(t) = (1 - 2 a t^2) e^{-a t^2}$, with $a = \pi^2 f_0^2$, whose Fourier transform is thus: $\frac{1}{2} \frac{\sqrt{\pi}\omega^2}{a^{3/2}}e^{-\frac{\omega^2}{4 a}}$ This gives the wavelet of Figure [1.2](#fig:RickerWavelet).
+Turn this flag on to use a Ricker source-time function, i.e., the second derivative of a Gaussian, instead of the source-time functions set by default to represent a (tilted) `FORCESOLUTION` force point source or a `CMTSOLUTION` moment-tensor source. Note that we use the standard definition of a Ricker, for a dominant frequency $f_0$: $\mathrm{Ricker}(t) = (1 - 2 a t^2) e^{-a t^2}$, with $a = \pi^2 f_0^2$, whose Fourier transform is thus: $\frac{1}{2} \frac{\sqrt{\pi}\omega^2}{a^{3/2}}e^{-\frac{\omega^2}{4 a}}$ This gives the wavelet of Figure [1.2](#fig:RickerWavelet).
 
 ![We use the standard definition of a Ricker (i.e., second derivative of a Gaussian). Image taken from <http://subsurfwiki.org>.](figures/Ricker_wavelet.png)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: We use the standard definition of a Ricker (i.e., second derivative of a Gaussian). Image taken from <http://subsurfwiki.org>.</span></div>
 
-Originally, if a `CMTSOLUTION` moment-tensor source is used, a (pseudo) Heaviside step function with a very short half duration is defined for elastic cases to represent the permanent slip on the fault while in the acoustic case a Gaussian source time function with a similarly short half duration is defined to physically describe actions within the fluid. Otherwise, if a `FORCESOLUTION` force source is used, a (pseudo) Dirac delta source time function is defined by default. Any other source-time function may then be obtained by convolution.
+Originally, if a `CMTSOLUTION` moment-tensor source is used, a (pseudo) Heaviside step function with a very short half duration is defined for elastic cases to represent the permanent slip on the fault while in the acoustic case a Gaussian source-time function with a similarly short half duration is defined to physically describe actions within the fluid. Otherwise, if a `FORCESOLUTION` force source is used, a (pseudo) Dirac delta source-time function is defined by default. Any other source-time function may then be obtained by convolution.
 
 `PRINT_SOURCE_TIME_FUNCTION`  
-Turn this flag on to print information about the source time function in the file `OUTPUT_FILES/plot_source_time_function.txt`. This feature is only relevant for the solver.
+Turn this flag on to print information about the source-time function in the file `OUTPUT_FILES/plot_source_time_function.txt`. This feature is only relevant for the solver.
 
 &nbsp;
 
@@ -272,5 +272,5 @@ Olsen, K. B., S. M. Day, and C. R. Bradley. 2003. “Estimation of $Q$ for Long-
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov 21, 2022)
+> (Dec 13, 2022)
 
