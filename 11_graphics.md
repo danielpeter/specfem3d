@@ -14,12 +14,12 @@ Graphics
 Meshes
 ------
 
-In case you used the internal mesher `xmeshfem3D` to create and partition your mesh, you can output mesh files in ABAQUS (.INP) and DX (.dx) format to visualize them. For this, you must set either the flag `CREATE_DX_FILES` or `CREATE_ABAQUS_FILES` to `.true.` in the mesher’s parameter file `Mesh_Par_file` prior to running the mesher (see Chapter [\[cha:Running-the-Mesher-Meshfem3D\]](#cha:Running-the-Mesher-Meshfem3D) for details). You can then use AVS or OpenDX to visualize the mesh and MPI partition (slices).
+In case you used the internal mesher `xmeshfem3D` to create and partition your mesh, you can output mesh files in ABAQUS (.INP) and DX (.dx) format to visualize them. For this, you must set either the flag `CREATE_DX_FILES` or `CREATE_ABAQUS_FILES` to `.true.` in the mesher’s parameter file `Mesh_Par_file` prior to running the mesher (see Chapter [\[cha:Running-the-Mesher-Meshfem3D\]](#cha:Running-the-Mesher-Meshfem3D) for details). You can then use [AVS](www.avs.com) or [OpenDX](www.opendx.org) to visualize the mesh and MPI partition (slices).
 
 ![image](figures/vtk_mesh_vp.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/vtk_mesh_vs.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
 
-You have also the option to visualize the distributed databases produced by `xgenerate_databases` using Paraview . For this, you must set the flag `SAVE_MESH_FILES` to `.true.` in the main parameter file `DATA/Par_file` (see Chapter [\[cha:Main-Parameter\]](#cha:Main-Parameter) for details). This will create VTK files for each single partition. You can then use Paraview to visualized these partitions.
+You have also the option to visualize the distributed databases produced by `xgenerate_databases` using [Paraview](www.paraview.org). For this, you must set the flag `SAVE_MESH_FILES` to `.true.` in the main parameter file `DATA/Par_file` (see Chapter [\[cha:Main-Parameter\]](#cha:Main-Parameter) for details). This will create VTK files for each single partition. You can then use [Paraview](www.paraview.org) to visualized these partitions.
 
 *T*o visualize seismograms with Paraview, you should turn off the flag SU_FORMAT, and turn on the use binary seismograms flag. This will generate .bin files, that you can open with Paraview. You have to select the way you open it ("raw"), and specify the dimensions of the file (NSTEP and NREC).
 
@@ -58,7 +58,7 @@ and run the executable `xcreate_movie_shakemap_AVS_DX_GMT` in the main directory
 ![image](figures/movie_surf_1.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/movie_surf_2.jpg) <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div> ![image](figures/movie_surf_3.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: image</span></div>
 
-The `SPECFEM3D Cartesian` code is running in near real-time to produce animations of southern California earthquakes via the web; see Southern California ShakeMovie.
+The `SPECFEM3D Cartesian` code is running in near real-time to produce animations of southern California earthquakes via the web; see Southern California [ShakeMovie](www.shakemovie.caltech.edu).
 
 ### Movie Volume
 
@@ -115,7 +115,7 @@ For this task, you can use and modify the script `mesh2vtu.pl` located in direct
 
     mesh2vtu.pl -i velocity_Z_it000400.mesh -o velocity_Z_it000400.vtu
 
-Notice that this Perl script uses a program `mesh2vtu` in the `utils/Visualization/Paraview/mesh2vtu` directory, which further uses the VTK run-time library for its execution. Therefore, make sure you have them properly set in the script according to your system.
+Notice that this Perl script uses a program `mesh2vtu` in the `utils/Visualization/Paraview/mesh2vtu` directory, which further uses the [VTK](http://www.vtk.org) run-time library for its execution. Therefore, make sure you have them properly set in the script according to your system.
 
 Then, to do a movie with several iterations, you have to repeat this process for each iteration you want to put in your movie.
 
@@ -171,7 +171,7 @@ The finite-frequency kernels computed as explained in Section [\[sec:Adjoint-sim
 
             mesh2vtu.pl -i file.mesh -o file.vtu
 
-    2.  Notice that this Perl script uses a program `mesh2vtu` in the `utils/Visualization/Paraview/mesh2vtu` directory, which further uses the VTK run-time library for its execution. Therefore, make sure you have them properly set in the script according to your system.
+    2.  Notice that this Perl script uses a program `mesh2vtu` in the `utils/Visualization/Paraview/mesh2vtu` directory, which further uses the [VTK](http://www.vtk.org/) run-time library for its execution. Therefore, make sure you have them properly set in the script according to your system.
 
 5.  **Copy over the source and receiver .vtk file**
 
@@ -179,7 +179,7 @@ The finite-frequency kernels computed as explained in Section [\[sec:Adjoint-sim
 
 6.  **View the mesh in ParaView**
 
-    Finally, we can view the mesh in ParaView .
+    Finally, we can view the mesh in [ParaView](www.paraview.org).
 
     1.  Open ParaView.
 
@@ -197,7 +197,7 @@ The finite-frequency kernels computed as explained in Section [\[sec:Adjoint-sim
 
     7.  Now load in the source and receiver location file by File $\rightarrow$ Open data, select `sr.vt`k, and click the Accept button. Choose Filter $\rightarrow$ Glyph, and represent the points by ‘spheres’.
 
-    8.  For more information about ParaView, see the ParaView Users Guide .
+    8.  For more information about ParaView, see the [ParaView Users Guide](www.paraview.org/files/v1.6/ParaViewUsersGuide.PDF).
 
 ![(a) Top Panel: Vertical source-receiver cross-section of the S-wave finite-frequency sensitivity kernel $K_{\beta}$ for station GSC at an epicentral distance of 176 km from the September 3, 2002, Yorba Linda earthquake. Lower Panel: Vertical source-receiver cross-section of the 3D S-wave speed model used for the spectral-element simulations (Komatitsch et al. 2004). (b) The same as (a) but for station HEC at an epicentral distance of 165 km (Liu and Tromp 2006).](figures/3D-S-Kernel.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: (a) Top Panel: Vertical source-receiver cross-section of the S-wave finite-frequency sensitivity kernel $K_{\beta}$ for station GSC at an epicentral distance of 176 km from the September 3, 2002, Yorba Linda earthquake. Lower Panel: Vertical source-receiver cross-section of the 3D S-wave speed model used for the spectral-element simulations (Komatitsch et al. 2004). (b) The same as (a) but for station HEC at an epicentral distance of 165 km (Liu and Tromp 2006).</span></div>
@@ -212,5 +212,5 @@ Liu, Qinya, and Jeroen Tromp. 2006. “Finite-Frequency Kernels Based on Adjoint
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Dec 13, 2022)
+> (Mar  9, 2023)
 
