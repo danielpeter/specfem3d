@@ -106,7 +106,7 @@ rho
 density of the material (given in kg/m$^{3}$).
 
 Q  
-quality factor to use in case of a simulation with attenuation turned on. It should be between 1 and 9000. In case no attenuation information is available, it can be set to zero. You can either specify a single Q value, in which case it will be assumed to be pure shear attenuation $Q_{\mu}$, or two separate values for bulk and shear attenuation, $Q_{\kappa}$ and $Q_{\mu}$ respectively. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and `utils/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`.
+quality factor to use in case of a simulation with attenuation turned on. It should be between 1 and 9000. In case no attenuation information is available, it can be set to zero. You can either specify a single Q value, in which case it will be assumed to be pure shear attenuation $Q_{\mu}$, or two separate values for bulk and shear attenuation, $Q_{\kappa}$ and $Q_{\mu}$ respectively. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and `utils/small_utilities/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`.
 
 Please note that your Vp- and Vs-speeds are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` defined (in Hz) in input file `DATA/Par_file`. The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency.
 
@@ -197,7 +197,7 @@ Defines the material properties.
 
   where **`domain_ID`** **is 1 for acoustic and 2 for elastic or viscoelastic materials,** `material_ID` a unique identifier, `rho` the density in $kg\, m^{-3}$, `vp` the P-wave speed in $m\, s^{-1}$, `vs` the S-wave speed in $m\, s^{-1}$, `Q` the quality factor and `anisotropy_flag` an identifier for anisotropic models. Note that both `Qkappa` and `Qmu` are ignored by the code unless `ATTENUATION` is set. If you want a model with no `Qmu` attenuation, both set `ATTENUATION` to `.false.` in the `DATA/Par_file` and set `Qmu` to 9999 here. If you want a model with no `Qkappa` attenuation, set `Qkappa` to 9999 here. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp.
 
-  To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and the helper code `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` in folder `utils/attenuation/`.
+  To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and the helper code `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` in folder `utils/small_utilities/attenuation/`.
 
 - For tomographic velocity models, please read Chapter [\[cha:-Changing-the\]](#cha:-Changing-the) and Section [\[sec:Using-tomographic\]](#sec:Using-tomographic) ‘Using external tomographic Earth models’ for further details.
 
@@ -298,7 +298,7 @@ In the main directory, type
 
 If all paths and flags have been set correctly, the mesher should now compile and produce the executable `bin/xmeshfem3D`. Please note that `xmeshfem3D` must be called directly from the main directory, as most of the binaries of the package.
 
-Input for the mesh generation program is provided through the parameter file `Mesh_Par_file`, which resides in the subdirectory `DATA/meshfem3D_files/`. (To see how to use it, see the EXAMPLES specific to the internal mesher in directory `EXAMPLES/meshfem3D_examples/`.) Before running the mesher, a number of parameters need to be set in the `Mesh_Par_file`. This requires a basic understanding of how the SEM is implemented, and we encourage you to read D. Komatitsch and Vilotte (1998; D. Komatitsch and Tromp 1999) and Dimitri Komatitsch et al. (2004).
+Input for the mesh generation program is provided through the parameter file `Mesh_Par_file`, which resides in the subdirectory `DATA/meshfem3D_files/`. (To see how to use it, see the EXAMPLES specific to the internal mesher in directory `EXAMPLES/applications/meshfem3D_examples/`.) Before running the mesher, a number of parameters need to be set in the `Mesh_Par_file`. This requires a basic understanding of how the SEM is implemented, and we encourage you to read D. Komatitsch and Vilotte (1998; D. Komatitsch and Tromp 1999) and Dimitri Komatitsch et al. (2004).
 
 The mesher and the solver use UTM coordinates internally, therefore you need to define the zone number for the UTM projection (e.g., zone 11 for Los Angeles). Use decimal values for latitude and longitude (no minutes/seconds). These values are approximate; the mesher will round them off to define a square mesh in UTM coordinates. When running benchmarks on rectangular models, turn the UTM projection off by using the flag `SUPPRESS_UTM_PROJECTION`, in which case all ‘longitude’ parameters simply refer to the $x$ axis, and all ‘latitude’ parameters simply refer to the $y$ axis.
 
@@ -427,7 +427,7 @@ At the end of this file, you simply need to set the number of spectral elements 
 
 Now that you have set the appropriate parameters in the `Mesh_Par_file` and have compiled the mesher, you are ready to run it!
 
-Depending on your system, please check how to run executables with MPI. To run the mesher on your cluster, we provide some example scripts for you to modify accordingly in `utils/Cluster/`. For some installations, you might need to provide a file that tells MPI what compute nodes to use for the simulations. In this case, the file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file name is `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher***` and `go_solver**` default job submission scripts provided in directory `utils/Cluster/`. To run the mesher, it is most easily accomplished based upon the `go_mesher***` script. When you run on a PC cluster, the script assumes that the nodes are named `n001`, `n002`, etc. If this is not the case, change the `tr -d ‘n’` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [\[cha:Scheduler\]](#cha:Scheduler) for information about running the code on a system with a scheduler, e.g., LSF.
+Depending on your system, please check how to run executables with MPI. To run the mesher on your cluster, we provide some example scripts for you to modify accordingly in `utils/scripts/Cluster/`. For some installations, you might need to provide a file that tells MPI what compute nodes to use for the simulations. In this case, the file must have a number of entries (one entry per line) at least equal to the number of processors needed for the run. A sample file name is `mymachines`. This file is not used by the mesher or solver, but is required by the `go_mesher***` and `go_solver**` default job submission scripts provided in directory `utils/scripts/Cluster/`. To run the mesher, it is most easily accomplished based upon the `go_mesher***` script. When you run on a PC cluster, the script assumes that the nodes are named `n001`, `n002`, etc. If this is not the case, change the `tr -d ‘n’` line in the script. You may also need to edit the last command at the end of the script that invokes the `mpirun` command. See Chapter [\[cha:Scheduler\]](#cha:Scheduler) for information about running the code on a system with a scheduler, e.g., LSF.
 
 Mesher output is provided in the `OUTPUT_FILES/` directory in `output_mesher.txt`; this file provides lots of details about the mesh that was generated.
 
@@ -451,7 +451,7 @@ The way we prescribe material property for porous material in SPECFEM3D depends 
 
 where `rho_s` = solid density, `rho_f` = fluid density, `phi` = porosity, `tort` = tortuosity, `kxx` = xx component of permeability tensor, `kxy` = xy,yx components of permeability tensor, `kyy` = yy component of permeability tensor, `kxz` = xz,zx components of permeability tensor, `kzz` = zz component of permeability tensor, `kappa_s` = solid bulk modulus, `kappa_f` = fluid bulk modulus, `kappa_fr` = frame bulk modulus, `eta_f` = fluid viscosity, `mu_fr` = frame shear modulus.
 
-Using an external mesh (for instance coming from CUBIT/TRELIS), poroelastic materials have the ID number 3, while 1 is acoustic and 2 is elastic (see the example in the package: EXAMPLES/homogeneous_poroelastic).
+Using an external mesh (for instance coming from CUBIT/TRELIS), poroelastic materials have the ID number 3, while 1 is acoustic and 2 is elastic (see the example in the package: `EXAMPLES/applications/homogeneous_poroelastic`).
 
 In case the internal mesher `xmeshfem3D` is used, the same poroelastic material properties will be defined in the `Mesh_Par_file`. See the above section [1.2](#cha:Running-the-Mesher-Meshfem3D) on how the corresponding line format would look like.
 
@@ -471,5 +471,5 @@ Pellegrini, F., and J. Roman. 1996. “SCOTCH: A Software Package for Static Map
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Nov 14, 2023)
+> (Nov 15, 2023)
 
