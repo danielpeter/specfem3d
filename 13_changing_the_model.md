@@ -52,17 +52,25 @@ Each data record line provides the velocity model values in a format like:
 or
 
     # data record format: anelastic isotropic model
-    x y z   vp    vs    rho Qp  Qs
+    x y z   vp    vs    rho    Qp    Qs
     ..
 
-where `x`, `y`, `z` are the grid point position, `vp`, `vs` and `rho` the P- and S-wave speeds and density, and `Qp` and `Qs` the quality factors for P- and S-wave speeds. The quality factors are optional and can be omitted for purely elastic models (the tomography routine will recognize both formats). Internally, the quality factors will be converted to bulk and shear attenuation values, $Q_{\kappa}$ and $Q_{\mu}$ respectively (Anderson and Hart 1978). Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and `utils/small_utilities/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`. For simulations with attenuation, please note that the Vp- and Vs-velocities of your model are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` defined (in Hz) in input file `DATA/Par_file`.
+where `x`, `y`, `z` are the grid point position, `vp`, `vs` and `rho` the P- and S-wave speeds and density, and `Qp` and `Qs` the quality factors for P- and S-wave speeds. The quality factors are optional and can be omitted for purely elastic models (the tomography routine will recognize both formats).
+
+Internally, the quality factors will be converted to bulk and shear attenuation values, $Q_{\kappa}$ and $Q_{\mu}$ respectively (Anderson and Hart 1978). Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf`. There is also a source code file`conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` provided in folder `utils/small_utilities/attenuation/`. For simulations with attenuation, please note that the Vp- and Vs-velocities of your model are given for a reference frequency. To change this reference frequency, you change the value of `ATTENUATION_f0_REFERENCE` defined (in Hz) in input file `DATA/Par_file`.
 
 The code uses a constant $Q$ quality factor, write(IMAIN,\*) "but approximated based on a series of Zener standard linear solids (SLS). The approximation is thus performed in a given frequency band determined based on that `ATTENUATION_f0_REFERENCE` reference frequency.
 
 ![Tomography file `file_name` that describes an external, purely elastic Earth model. The coordinates x, y and z of the grid, their limits ORIG_X, ORIG_Y, ORIG_Z, END_X, END_Y, END_Z and the grid spacings SPACING_X, SPACING_Y, SPACING_Z should be in the units of the constructed mesh (e.g., UTM coordinates in meters).](figures/tomo_file.jpg)
 <div class="figcaption" style="text-align:justify;font-size:80%"><span style="color:#9A9A9A">Figure: Tomography file `file_name` that describes an external, purely elastic Earth model. The coordinates x, y and z of the grid, their limits ORIG_X, ORIG_Y, ORIG_Z, END_X, END_Y, END_Z and the grid spacings SPACING_X, SPACING_Y, SPACING_Z should be in the units of the constructed mesh (e.g., UTM coordinates in meters).</span></div>
 
-The user can implement his own interpolation algorithm for the tomography model by changing the routine `model_tomography.f90` located in the `src/generate_databases/` directory. Moreover, for models that involve both fully defined materials and a tomography description, the `nummaterial_velocity_file` has multiple lines each with the corresponding suitable format described above.
+The user can implement his own interpolation algorithm for the tomography model by changing the routines in file `model_tomography.f90` located in the `src/generate_databases/` directory. Moreover, for models that involve both fully defined materials and a tomography description, the `nummaterial_velocity_file` has multiple lines each with the corresponding suitable format described above.
+
+Finally, the tomography file can have as many comment lines starting with a hash sign "#" as you like. In case you want to provide a tomography file with regular gridded lon/lat/depth coordinates instead of x/y/z, you can add a comment line like this into the header section of the file:
+
+    # coordinate format   : lon / lat / depth
+
+This can be helpful when working with a simulation setup for a specific local region using a corresponding UTM-projection (and topography). In such cases, it is more convenient to use lon/lat/depth coordinates instead of UTM coordinates directly. As an example for how to create such a tomography file, a python script `run_convert_IRIS_EMC_netCDF_2_tomo.py` is provided in folder `utils/scripts/` to extract a tomography file from an [IRIS EMC model](https://ds.iris.edu/ds/products/emc-earthmodels/) that gets provided in netCDF format.
 
 #### Example: External tomography file with variable discretization intervals
 
@@ -72,7 +80,7 @@ The example in Figure [1.1](#fig:tomography_file) is for an external tomography 
 
 and the file `tomography_model.xyz` will need to reside in `DATA/`. All entries in the second column of `materials_file` will be `-1`, which means that each element in the mesh will be interpolated according to the values in `tomography_model.xyz`.
 
-In some cases it may be desirable to have an external tomography model that is described in more than one file. For example, in cases like southern California, the length scale of variation in the structure of the wave speed model is much shorter in the sedimentary basin models within the upper 15 km. Therefore one might want to use an external tomography file that is sampled with, say, $\Delta x = 1000$ m, $\Delta y = 1000$ m, and $\Delta z = 250$ m in the uppermost 15 km, and then use $\Delta x = 2000$ m, $\Delta y = 2000$ m, and $\Delta z = 1000$ m below a depth of 15 km. If these intervals are chosen appropriately, then it will result in a pair of external tomography file that is much smaller than the alternative of having a single file with the fine discretization. In this case `nummaterial_velocity_file` is
+In some cases it may be desirable to have an external tomography model that is described in more than one file. For example, in cases like Southern California, the length scale of variation in the structure of the wave speed model is much shorter in the sedimentary basin models within the upper 15 km. Therefore one might want to use an external tomography file that is sampled with, say, $\Delta x = 1000$ m, $\Delta y = 1000$ m, and $\Delta z = 250$ m in the uppermost 15 km, and then use $\Delta x = 2000$ m, $\Delta y = 2000$ m, and $\Delta z = 1000$ m below a depth of 15 km. If these intervals are chosen appropriately, then it will result in a pair of external tomography file that is much smaller than the alternative of having a single file with the fine discretization. In this case `nummaterial_velocity_file` is
 
     2  -1 tomography elastic file_above_15km.xyz 1
     2  -2 tomography elastic file_below_15km.xyz 1
@@ -100,7 +108,7 @@ Output to this routine consists of:
 isotropic model parameters for density $\rho$ ($kg/m^{3}$), $v_{p}$ ($m/s$) and $v_{s}$ ($m/s$)
 
 `qkappa_atten,qmu_atten`  
-Bulk and shear wave quality factor: $0<Q_{\kappa,\mu}<9000$. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and `utils/small_utilities/attenuation/conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90`.
+Bulk and shear wave quality factor: $0<Q_{\kappa,\mu}<9000$. Note that Qmu is always equal to Qs, but Qkappa is in general not equal to Qp. To convert one to the other see `doc/note_on_Qkappa_versus_Qp.pdf` and source code file `conversion_from_Qkappa_Qmu_to_Qp_Qs_from_Dahlen_Tromp_959_960.f90` in folder `utils/small_utilities/attenuation`.
 
 `iflag_aniso`  
 anisotropic model flag, $0$ indicating no anisotropy or $1$ using anisotropic model parameters as defined in routine file `model_aniso.f90`
@@ -145,7 +153,9 @@ In `DATA/Par_file`, **`MODEL`** should be set to **`sep`**, and **`SEP_MODEL_DIR
 
 Note that in order not to overload the parameter file, SEP header files should be named `vp.H`, `vs.H` and `rho.H`. The `in` field in these binary files can be any path as long as it is relative to the previously set `SEP_MODEL_DIRECTORY`. We also assume that any dimensional value inside SEP header files is given in meters and that binary files are single precision floating point numbers stored in little endian format. There is currently only support for `vp`, `vs` and `rho` variables.
 
-An example demonstrating the use SEP models is given in: `EXAMPLES/applications/meshfem3D_examples/sep_bathymetry`.
+An example demonstrating the use of SEP models is given in: `EXAMPLES/applications/meshfem3D_examples/sep_bathymetry`.
+
+Please consider adding improvements and/or new model implementations to this package - feel free to contribute!
 
 References
 ----------
@@ -155,5 +165,5 @@ Anderson, Don L., and R. S. Hart. 1978. “$Q$ of the Earth.” *J. Geophys. Res
 -----
 > This documentation has been automatically generated by [pandoc](http://www.pandoc.org)
 > based on the User manual (LaTeX version) in folder doc/USER_MANUAL/
-> (Dec 20, 2023)
+> (Jan 10, 2024)
 
