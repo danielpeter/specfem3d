@@ -195,7 +195,8 @@
                                                     iphase, &
                                                     PML_CONDITIONS, &
                                                     SIMULATION_TYPE,backward_simulation, &
-                                                    potential_acoustic,potential_dot_acoustic)
+                                                    potential_acoustic,potential_dot_acoustic, &
+                                                    displ)
 
 
             else
@@ -210,7 +211,8 @@
                                                     iphase, &
                                                     PML_CONDITIONS, &
                                                     SIMULATION_TYPE,backward_simulation, &
-                                                    potential_acoustic,potential_dot_acoustic)
+                                                    potential_acoustic,potential_dot_acoustic, &
+                                                    displ)
 
             endif
           else
@@ -597,7 +599,8 @@
                                                   iphase, &
                                                   PML_CONDITIONS, &
                                                   SIMULATION_TYPE,backward_simulation, &
-                                                  potential_acoustic,potential_dot_acoustic)
+                                                  potential_acoustic,potential_dot_acoustic, &
+                                                  b_displ)
           else
             ! on GPU
             call compute_coupling_el_ac_cuda(Mesh_pointer,iphase,num_coupling_ac_el_faces,3) ! 3 == backward

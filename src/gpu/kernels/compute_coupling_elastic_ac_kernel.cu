@@ -82,12 +82,12 @@ __global__ void compute_coupling_elastic_ac_kernel(field* potential_dot_dot_acou
       rhol = rhostore[INDEX4_PADDED(NGLLX,NGLLX,NGLLX,i,j,k,ispec)];
 
       // note: uses potential chi such that displacement s = grad(chi),
-      //         pressure becomes: p = - kappa ( div( s ) ) = rho ( - dot_dot_chi + g * s )
-      //  g only acting in negative z-direction
+      //       pressure becomes: p = - kappa ( div( s ) ) = rho ( - dot_dot_chi + g * s )
+      //
+      // g only acting in negative z-direction, i.e. g = - g z_hat and term + g * s = - g s_z
 
       // daniel: TODO - check gravity and coupling would be displ * nz  correct?
-      pressure = rhol*( - potential_dot_dot_acoustic[iglob]
-                       + minus_g[iglob] * displ[iglob*3+2] );
+      pressure = rhol * ( - potential_dot_dot_acoustic[iglob] + minus_g[iglob] * displ[iglob*3+2] );
 
       //daniel: TODO - check gravity and coupling
       //pressure = - potential_dot_dot_acoustic[iglob] ;

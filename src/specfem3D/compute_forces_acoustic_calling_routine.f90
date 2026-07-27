@@ -97,10 +97,12 @@
   if (GPU_MODE .and. PML_CONDITIONS) call exit_MPI(myrank,'PML conditions for acoustic domains not yet implemented on GPUs')
 
   ! enforces free surface (zeroes potentials at free surface)
-  call acoustic_enforce_free_surface(NGLOB_AB,potential_acoustic,potential_dot_acoustic,potential_dot_dot_acoustic, &
-                                     backward_simulation)
-  if (USE_LDDRK) then
-    call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,potential_acoustic_lddrk,potential_dot_acoustic_lddrk)
+  if (.not. GRAVITY) then
+    call acoustic_enforce_free_surface(NGLOB_AB,potential_acoustic,potential_dot_acoustic,potential_dot_dot_acoustic, &
+                                       backward_simulation)
+    if (USE_LDDRK) then
+      call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,potential_acoustic_lddrk,potential_dot_acoustic_lddrk)
+    endif
   endif
 
   ! distinguishes two runs: for elements in contact with MPI interfaces, and elements within the partitions
@@ -317,10 +319,12 @@
   endif
 
   ! enforces free surface (zeroes potentials at free surface)
-  call acoustic_enforce_free_surface(NGLOB_AB,potential_acoustic,potential_dot_acoustic,potential_dot_dot_acoustic, &
-                                     backward_simulation)
-  if (USE_LDDRK) then
-    call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,potential_acoustic_lddrk,potential_dot_acoustic_lddrk)
+  if (.not. GRAVITY) then
+    call acoustic_enforce_free_surface(NGLOB_AB,potential_acoustic,potential_dot_acoustic,potential_dot_dot_acoustic, &
+                                       backward_simulation)
+    if (USE_LDDRK) then
+      call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,potential_acoustic_lddrk,potential_dot_acoustic_lddrk)
+    endif
   endif
 
   ! coupling - not used yet
@@ -409,11 +413,13 @@
   if (GPU_MODE .and. PML_CONDITIONS) call exit_MPI(myrank,'PML conditions for acoustic domains not yet implemented on GPUs')
 
   ! enforces free surface (zeroes potentials at free surface)
-  call acoustic_enforce_free_surface(NGLOB_ADJOINT,b_potential_acoustic,b_potential_dot_acoustic,b_potential_dot_dot_acoustic, &
-                                     backward_simulation)
-  if (USE_LDDRK) then
-    stop 'LDDRK for backward fields not implemented yet'
-    !call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,b_potential_acoustic_lddrk,b_potential_dot_acoustic_lddrk)
+  if (.not. GRAVITY) then
+    call acoustic_enforce_free_surface(NGLOB_ADJOINT,b_potential_acoustic,b_potential_dot_acoustic,b_potential_dot_dot_acoustic, &
+                                       backward_simulation)
+    if (USE_LDDRK) then
+      stop 'LDDRK for backward fields not implemented yet'
+      !call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,b_potential_acoustic_lddrk,b_potential_dot_acoustic_lddrk)
+    endif
   endif
 
   ! distinguishes two runs: for elements on MPI interfaces, and elements within the partitions
@@ -581,11 +587,13 @@
   endif
 
   ! enforces free surface (zeroes potentials at free surface)
-  call acoustic_enforce_free_surface(NGLOB_ADJOINT,b_potential_acoustic,b_potential_dot_acoustic,b_potential_dot_dot_acoustic, &
-                                     backward_simulation)
-  if (USE_LDDRK) then
-    stop 'LDDRK for backward fields not implemented yet'
-    !call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,b_potential_acoustic_lddrk,b_potential_dot_acoustic_lddrk)
+  if (.not. GRAVITY) then
+    call acoustic_enforce_free_surface(NGLOB_ADJOINT,b_potential_acoustic,b_potential_dot_acoustic,b_potential_dot_dot_acoustic, &
+                                       backward_simulation)
+    if (USE_LDDRK) then
+      stop 'LDDRK for backward fields not implemented yet'
+      !call acoustic_enforce_free_surface_lddrk(NGLOB_AB_LDDRK,b_potential_acoustic_lddrk,b_potential_dot_acoustic_lddrk)
+    endif
   endif
 
   end subroutine compute_forces_acoustic_backward_calling
@@ -623,8 +631,10 @@
 
   ! enforces free surface (zeroes potentials at free surface)
   ! assumes SIMULATION_TYPE == 3
-  call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,1)   ! 1 == forward
-  call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,3)   ! 3 == backward
+  if (.not. GRAVITY) then
+    call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,1)   ! 1 == forward
+    call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,3)   ! 3 == backward
+  endif
 
   ! distinguishes two runs: for elements on MPI interfaces, and elements within the partitions
   do iphase = 1,2
@@ -749,8 +759,10 @@
 
   ! enforces free surface (zeroes potentials at free surface)
   ! assumes SIMULATION_TYPE == 3
-  call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,1)   ! 1 == forward
-  call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,3)   ! 3 == backward
+  if (.not. GRAVITY) then
+    call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,1)   ! 1 == forward
+    call acoustic_enforce_free_surf_cuda(Mesh_pointer,STACEY_INSTEAD_OF_FREE_SURFACE,3)   ! 3 == backward
+  endif
 
   end subroutine compute_forces_acoustic_GPU_calling
 
@@ -763,7 +775,7 @@
 
   use constants
   use specfem_par, only: Mesh_pointer,ibool,free_surface_ijk,free_surface_ispec,num_free_surface_faces, &
-    STACEY_INSTEAD_OF_FREE_SURFACE,BOTTOM_FREE_SURFACE,GPU_MODE
+    STACEY_INSTEAD_OF_FREE_SURFACE,BOTTOM_FREE_SURFACE,GPU_MODE,GRAVITY
   use specfem_par_acoustic, only: ispec_is_acoustic
 
   implicit none
@@ -781,6 +793,9 @@
 
   ! checks if free surface became an absorbing boundary
   if (STACEY_INSTEAD_OF_FREE_SURFACE .and. .not. BOTTOM_FREE_SURFACE) return
+
+  ! gravity uses a dynamic free surface through the acoustic mass matrix
+  if (GRAVITY) return
 
   ! enforce potentials to be zero at surface
   if (.not. GPU_MODE) then
@@ -822,7 +837,7 @@
 
   use constants
   use specfem_par, only: ibool,free_surface_ijk,free_surface_ispec,num_free_surface_faces, &
-    STACEY_INSTEAD_OF_FREE_SURFACE,BOTTOM_FREE_SURFACE,GPU_MODE
+    STACEY_INSTEAD_OF_FREE_SURFACE,BOTTOM_FREE_SURFACE,GPU_MODE,GRAVITY
   use specfem_par_acoustic, only: ispec_is_acoustic
 
   implicit none
@@ -841,6 +856,9 @@
 
   ! checks if free surface became an absorbing boundary
   if (STACEY_INSTEAD_OF_FREE_SURFACE .and. .not. BOTTOM_FREE_SURFACE) return
+
+  ! gravity uses a dynamic free surface through the acoustic mass matrix
+  if (GRAVITY) return
 
   ! enforce potentials to be zero at surface
   do iface = 1, num_free_surface_faces

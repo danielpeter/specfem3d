@@ -184,9 +184,14 @@ implementation of anisotropic models.
 %
 \item [{\texttt{GRAVITY}}] Set to \texttt{.true.} if self-gravitation should
 be incorporated in the Cowling approximation \citep{KoTr02b,DaTr98}.
+For acoustic domains, \texttt{GRAVITY} turns a zero-pressure free surface into a dynamic free surface
+with restoring acceleration g.
+By default, the gravitational acceleration g is assumed to be constant and acts in vertical direction (z-axis).
+To enable a linear profile for the gravitational acceleration, add the optional parameter \texttt{USE\_GRAVITY\_MINMAX} set to \texttt{.true.}
+into the \texttt{Par_file} together with the \texttt{GRAVITY\_MINMAX\_TOP} and \texttt{GRAVITY\_MINMAX\_BOTTOM} parameters
+specifying the value of g (in $m/s^2$) at the top and bottom of the model, respectively.
 Turning this feature on is relatively inexpensive, both from the perspective
 of memory requirements as well as in terms of computational speed.
-The gravitational acceleration is assumed to be constant and acts in vertical direction (z-axis).
 %
 \item [{\texttt{ROTATION}}] Set to \texttt{.true.} if the Coriolis effect
 should be incorporated. Turning this feature on is relatively cheap

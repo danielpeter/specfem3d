@@ -36,12 +36,16 @@
                                               iphase, &
                                               PML_CONDITIONS, &
                                               SIMULATION_TYPE,backward_simulation, &
-                                              potential_acoustic,potential_dot_acoustic)
+                                              potential_acoustic,potential_dot_acoustic, &
+                                              displ)
 
 ! returns the updated acceleration array: accel
 
   use constants, only: CUSTOM_REAL,NDIM,NGLLX,NGLLY,NGLLZ,NGLLSQUARE
   use pml_par, only: rmemory_coupling_el_ac_potential_dot_dot,is_CPML,spec_to_CPML,NSPEC_CPML
+
+  ! for gravity
+  use specfem_par, only: GRAVITY,minus_g,rhostore
 
   implicit none
 
@@ -51,6 +55,7 @@
   ! displacement and pressure
   real(kind=CUSTOM_REAL), dimension(NDIM,NGLOB_AB),intent(inout) :: accel
   real(kind=CUSTOM_REAL), dimension(NGLOB_AB),intent(in) :: potential_dot_dot_acoustic,potential_dot_acoustic,potential_acoustic
+  real(kind=CUSTOM_REAL), dimension(NDIM,NGLOB_AB),intent(in) :: displ
 
   ! global indexing
   integer, dimension(NGLLX,NGLLY,NGLLZ,NSPEC_AB),intent(in) :: ibool
@@ -68,6 +73,7 @@
   ! local parameters
   real(kind=CUSTOM_REAL) :: pressure_x,pressure_y,pressure_z
   real(kind=CUSTOM_REAL) :: nx,ny,nz,jacobianw
+  real(kind=CUSTOM_REAL) :: rhol
 
   integer :: iface,igll,ispec,iglob
   integer :: i,j,k
@@ -98,7 +104,24 @@
       iglob = ibool(i,j,k,ispec)
 
       ! acoustic pressure on global point
-      pressure_x = - potential_dot_dot_acoustic(iglob)
+      if (GRAVITY) then
+        ! takes density (from acoustic? element)
+        rhol = rhostore(i,j,k,ispec)
+
+        ! note: uses potential chi such that displacement s = grad(chi),
+        !       pressure becomes: p = - kappa ( div( s ) ) = rho ( - dot_dot_chi + g * s )
+        !
+        !  g only acting in negative z-direction, i.e. g = - g z_hat and term + g * s = - g s_z
+
+        ! daniel: TODO - check gravity and coupling would be displ * nz  correct?
+        pressure_x = rhol * ( - potential_dot_dot_acoustic(iglob) + minus_g(iglob) * displ(3,iglob) )
+      else
+        ! no gravity: uses potential chi such that displacement s = 1/rho grad(chi)
+        !             pressure p = - kappa ( div( s )) then becomes: p = - dot_dot_chi
+        !             ( multiplied with factor 1/kappa due to setup of equation of motion )
+        pressure_x = - potential_dot_dot_acoustic(iglob)
+      endif
+
       pressure_y = pressure_x
       pressure_z = pressure_x
 

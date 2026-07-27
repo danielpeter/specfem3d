@@ -131,6 +131,24 @@
   real(kind=CUSTOM_REAL) :: jacobianl
   integer :: ispec,ispec_irreg,i,j,k,iglob
 
+! in case of an acoustic medium, a potential Chi of (density * displacement) is used as in Chaljub and Valette,
+! Geophysical Journal International, vol. 158, p. 131-141 (2004) and *NOT* a velocity potential
+! as in Komatitsch and Tromp, Geophysical Journal International, vol. 150, p. 303-318 (2002).
+!
+! Displacement is defined such that
+!     u = grad(Chi) / rho
+! Velocity is then:
+!     v = grad(Chi_dot) / rho
+! (Chi_dot being the time derivative of Chi)
+! and pressure is:
+!     p = - Chi_dot_dot
+! (Chi_dot_dot being the time second derivative of Chi).
+!
+! The mass matrix assembly for this definition of potential Chi is then defined as
+!     M = M + 1/kappa
+! which in the weak form becomes
+!     M = M + wgll(i) * wgll(j) * wgll(k) * jacobian / kappa
+
   ! acoustic mass matrix
   rmass_acoustic(:) = 0._CUSTOM_REAL
 

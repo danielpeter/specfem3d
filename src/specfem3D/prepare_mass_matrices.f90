@@ -35,6 +35,23 @@
 
   implicit none
 
+! note: Here we add additional contributions to the mass matrix depending on the chosen simulations flags
+!       like STACEY, PML, ROTATION, GRAVITY.
+!       Once all the contributions have been added, the mass matrices can then be inverted.
+!
+!       The meshing done by `xgenerate_databases` has created the "basic" mass matrices for acoustic, elastic
+!       and poroelastic domains. We add the additional contributions here in the solver to allow users to turn on/off
+!       simulations flags without having to re-run the meshing part for more flexibility.
+!
+!       As you see below, these additional contributions for PML elements, STACEY boundary points, and ROTATION
+!       have terms like C*deltat/2. That means, that for forward and backward simulations where deltat and b_deltat
+!       can have different sign (unless UNDO_ATTENUATION was chosen), these contributions would need to distinguish
+!       between a "forward" mass matrix `rmassx`,.. and a "backward" mass matrix `b_rmassx`,..
+!
+!       However, this is not done yet in SPECFEM3D Cartesian (the global version SPECFEM3D Globe is doing this).
+!
+!TODO: check forward/backward wavefield reconstruction with separate mass matrices for STACEY, PML, ROTATION.
+
   ! user output
   if (myrank == 0) then
     write(IMAIN,*) "preparing mass matrices"
@@ -51,6 +68,13 @@
     ! (rmassz was read in from database file)
     rmassx(:) = rmassz(:)
     rmassy(:) = rmassz(:)
+  endif
+
+  ! acoustic gravity free surface
+  if (ACOUSTIC_SIMULATION) then
+    if (GRAVITY) then
+      call prepare_mass_matrix_acoustic_gravity()
+    endif
   endif
 
   ! PML absorbing conditions (adds C*deltat/2 to the mass matrices in PML elements)
@@ -343,3 +367,60 @@
 
   end subroutine prepare_mass_matrices_rotation
 
+!
+!-------------------------------------------------------------------------------------------------
+!
+
+  subroutine prepare_mass_matrix_acoustic_gravity()
+
+! adds the linearized free-surface gravity contribution to the acoustic mass matrix
+
+  use constants, only: CUSTOM_REAL,NGLLSQUARE
+  use specfem_par, only: ibool,rhostore,minus_g, &
+                         free_surface_ijk,free_surface_ispec,free_surface_jacobian2Dw, &
+                         num_free_surface_faces,PML_INSTEAD_OF_FREE_SURFACE, &
+                         STACEY_INSTEAD_OF_FREE_SURFACE,BOTTOM_FREE_SURFACE, &
+                         myrank
+  use specfem_par_acoustic, only: ispec_is_acoustic,rmass_acoustic
+
+  implicit none
+
+  ! local parameters
+  double precision :: gravityl,rhol,weight
+  integer :: iface,igll,i,j,k,ispec,iglob
+
+  ! checks if free surface became an absorbing boundary
+  if ((STACEY_INSTEAD_OF_FREE_SURFACE .or. PML_INSTEAD_OF_FREE_SURFACE) .and. .not. BOTTOM_FREE_SURFACE) return
+
+  do iface = 1,num_free_surface_faces
+    ispec = free_surface_ispec(iface)
+
+    ! acoustic domains only
+    if (ispec_is_acoustic(ispec)) then
+      do igll = 1,NGLLSQUARE
+        i = free_surface_ijk(1,igll,iface)
+        j = free_surface_ijk(2,igll,iface)
+        k = free_surface_ijk(3,igll,iface)
+        iglob = ibool(i,j,k,ispec)
+
+        gravityl = dabs(dble(minus_g(iglob)))
+        rhol = dble(rhostore(i,j,k,ispec))
+
+        ! check
+        if (gravityl <= 0.d0) call exit_MPI(myrank,'zero gravity on acoustic free surface')
+        if (rhol <= 0.d0) call exit_MPI(myrank,'zero density on acoustic free surface')
+
+        ! note: linearized dynamic free surface, has a term like:
+        !         int_Gamma chi_ddot w / (rho g)
+        !       this can be added by a contribution to the mass matrix:
+        !         M = [ M + 1/(rho g) ]
+        !       for GLL nodes on the free surface.
+        !       in a weak form, M_freesurface term is: wgll(i) * wgll(j) * jacobian / (rho g)
+        weight = dble(free_surface_jacobian2Dw(igll,iface)) / (rhol * gravityl)
+
+        rmass_acoustic(iglob) = rmass_acoustic(iglob) + real(weight,kind=CUSTOM_REAL)
+      enddo
+    endif
+  enddo
+
+  end subroutine prepare_mass_matrix_acoustic_gravity

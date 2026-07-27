@@ -62,10 +62,12 @@
   use constants, only: NGLLCUBE
 #endif
 
-  use specfem_par_acoustic, only: nspec_inner_acoustic,nspec_outer_acoustic, &
-                                   phase_ispec_inner_acoustic
+  use specfem_par_acoustic, only: nspec_inner_acoustic,nspec_outer_acoustic,phase_ispec_inner_acoustic
 
   use pml_par, only: is_CPML, NSPEC_CPML
+
+  ! for gravity
+  use specfem_par, only: GRAVITY,wgll_cube,minus_g,kappastore
 
   implicit none
 
@@ -88,11 +90,16 @@
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: chi_elem
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: temp1,temp2,temp3
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: newtemp1,newtemp2,newtemp3
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: sum_terms
 
   real(kind=CUSTOM_REAL) :: temp1l,temp2l,temp3l
   real(kind=CUSTOM_REAL) :: xixl,xiyl,xizl,etaxl,etayl,etazl,gammaxl,gammayl,gammazl,jacobianl
   real(kind=CUSTOM_REAL) :: dpotentialdxl,dpotentialdyl,dpotentialdzl
   real(kind=CUSTOM_REAL) :: rho_invl
+
+  ! for gravity
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: gravity_term
+  real(kind=CUSTOM_REAL) :: fac_z
 
   integer :: i,j,k,l,ispec,ispec_irreg,iglob,ispec_p,num_elements
 #ifdef FORCE_VECTORIZATION
@@ -120,7 +127,8 @@
 !$OMP irregular_element_number,jacobian_regular,xix_regular, &
 !$OMP potential_acoustic,potential_dot_acoustic,potential_dot_dot_acoustic, &
 !$OMP is_CPML,backward_simulation, &
-!$OMP xixstore,xiystore,xizstore,etaxstore,etaystore,etazstore,gammaxstore,gammaystore,gammazstore,jacobianstore,rhostore &
+!$OMP xixstore,xiystore,xizstore,etaxstore,etaystore,etazstore,gammaxstore,gammaystore,gammazstore,jacobianstore,rhostore, &
+!$OMP minus_g,kappastore &
 !$OMP ) &
 !$OMP PRIVATE( &
 !$OMP ispec_p,ispec,ispec_irreg,i,j,k,iglob, &
@@ -132,12 +140,14 @@
 !$OMP temp1l,temp2l,temp3l, &
 !$OMP chi_elem, &
 !$OMP temp1,temp2,temp3, &
-!$OMP newtemp1,newtemp2,newtemp3 &
+!$OMP newtemp1,newtemp2,newtemp3, &
+!$OMP sum_terms,gravity_term,fac_z &
 !$OMP ) &
 !$OMP FIRSTPRIVATE( &
 !$OMP hprime_xx,hprime_xxT, hprimewgll_xxT, hprimewgll_xx, &
 !$OMP hprime_yy,hprime_zz,hprimewgll_yy,hprimewgll_zz, &
-!$OMP wgllwgll_yz_3D,wgllwgll_xz_3D,wgllwgll_xy_3D &
+!$OMP wgllwgll_yz_3D,wgllwgll_xz_3D,wgllwgll_xy_3D, &
+!$OMP wgll_cube,GRAVITY &
 !$OMP )
 
   ! loop over spectral elements
@@ -220,59 +230,132 @@
       enddo
     end select
 
-    ! grad(potential)
-    ispec_irreg = irregular_element_number(ispec)
-    if (ispec_irreg /= 0) then
-      ! irregular element
-      DO_LOOP_IJK
-        ! reciprocal of density
-        rho_invl = 1.0_CUSTOM_REAL / rhostore(INDEX_IJK,ispec)
+    ! gravity
+    if (GRAVITY) then
+      ! uses potential definition: s = grad(chi)
+      !
+      ! gravity term: 1/kappa grad(chi) * g
+      ! assumes that g only acts in (negative) z-direction
+      !
+      ! grad(potential)
+      ispec_irreg = irregular_element_number(ispec)
+      if (ispec_irreg /= 0) then
+        ! irregular element
+        DO_LOOP_IJK
+          ! get derivatives of ux, uy and uz with respect to x, y and z
+          xixl = xixstore(INDEX_IJK,ispec_irreg)
+          xiyl = xiystore(INDEX_IJK,ispec_irreg)
+          xizl = xizstore(INDEX_IJK,ispec_irreg)
+          etaxl = etaxstore(INDEX_IJK,ispec_irreg)
+          etayl = etaystore(INDEX_IJK,ispec_irreg)
+          etazl = etazstore(INDEX_IJK,ispec_irreg)
+          gammaxl = gammaxstore(INDEX_IJK,ispec_irreg)
+          gammayl = gammaystore(INDEX_IJK,ispec_irreg)
+          gammazl = gammazstore(INDEX_IJK,ispec_irreg)
+          jacobianl = jacobianstore(INDEX_IJK,ispec_irreg)
+          ! derivatives of potential
+          dpotentialdxl = xixl*temp1(INDEX_IJK) + etaxl*temp2(INDEX_IJK) + gammaxl*temp3(INDEX_IJK)
+          dpotentialdyl = xiyl*temp1(INDEX_IJK) + etayl*temp2(INDEX_IJK) + gammayl*temp3(INDEX_IJK)
+          dpotentialdzl = xizl*temp1(INDEX_IJK) + etazl*temp2(INDEX_IJK) + gammazl*temp3(INDEX_IJK)
 
-        ! get derivatives of ux, uy and uz with respect to x, y and z
-        ! single arrays make it difficult for hardware pre-fetching...
-        xixl = xixstore(INDEX_IJK,ispec_irreg)
-        xiyl = xiystore(INDEX_IJK,ispec_irreg)
-        xizl = xizstore(INDEX_IJK,ispec_irreg)
-        etaxl = etaxstore(INDEX_IJK,ispec_irreg)
-        etayl = etaystore(INDEX_IJK,ispec_irreg)
-        etazl = etazstore(INDEX_IJK,ispec_irreg)
-        gammaxl = gammaxstore(INDEX_IJK,ispec_irreg)
-        gammayl = gammaystore(INDEX_IJK,ispec_irreg)
-        gammazl = gammazstore(INDEX_IJK,ispec_irreg)
-        jacobianl = jacobianstore(INDEX_IJK,ispec_irreg)
-        ! using fused array instead
-        !xixl = deriv_mapping(1,INDEX_IJK,ispec_irreg)
-        !xiyl = deriv_mapping(2,INDEX_IJK,ispec_irreg)
-        !xizl = deriv_mapping(3,INDEX_IJK,ispec_irreg)
-        !etaxl = deriv_mapping(4,INDEX_IJK,ispec_irreg)
-        !etayl = deriv_mapping(5,INDEX_IJK,ispec_irreg)
-        !etazl = deriv_mapping(6,INDEX_IJK,ispec_irreg)
-        !gammaxl = deriv_mapping(7,INDEX_IJK,ispec_irreg)
-        !gammayl = deriv_mapping(8,INDEX_IJK,ispec_irreg)
-        !gammazl = deriv_mapping(9,INDEX_IJK,ispec_irreg)
-        !jacobianl = deriv_mapping(10,INDEX_IJK,ispec_irreg)
+          ! additional gravity terms
+          ! uses potential definition: s = grad(chi)
+          !
+          ! gravity term: 1/kappa grad(chi) * g
+          ! assumes that g only acts in (negative) z-direction
+          !
+          ! get factor - g/kappa
+          iglob = ibool(INDEX_IJK,ispec)
+          fac_z = minus_g(iglob) / kappastore(INDEX_IJK,ispec)
+          ! acts only in vertical direction
+          gravity_term(INDEX_IJK) = jacobianl * wgll_cube(INDEX_IJK) * fac_z * dpotentialdzl
 
-        ! derivatives of potential
-        dpotentialdxl = xixl*temp1(INDEX_IJK) + etaxl*temp2(INDEX_IJK) + gammaxl*temp3(INDEX_IJK)
-        dpotentialdyl = xiyl*temp1(INDEX_IJK) + etayl*temp2(INDEX_IJK) + gammayl*temp3(INDEX_IJK)
-        dpotentialdzl = xizl*temp1(INDEX_IJK) + etazl*temp2(INDEX_IJK) + gammazl*temp3(INDEX_IJK)
+          ! reciprocal of density
+          rho_invl = 1.0_CUSTOM_REAL / rhostore(INDEX_IJK,ispec)
+          ! for acoustic medium
+          temp1(INDEX_IJK) = rho_invl * jacobianl * (xixl*dpotentialdxl + xiyl*dpotentialdyl + xizl*dpotentialdzl)
+          temp2(INDEX_IJK) = rho_invl * jacobianl * (etaxl*dpotentialdxl + etayl*dpotentialdyl + etazl*dpotentialdzl)
+          temp3(INDEX_IJK) = rho_invl * jacobianl * (gammaxl*dpotentialdxl + gammayl*dpotentialdyl + gammazl*dpotentialdzl)
+        ENDDO_LOOP_IJK
+      else
+        ! regular element
+        jacobianl = jacobian_regular
+        DO_LOOP_IJK
+          ! additional gravity terms
+          ! uses potential definition: s = grad(chi)
+          !
+          ! gravity term: 1/kappa grad(chi) * g
+          ! assumes that g only acts in (negative) z-direction
+          !
+          ! get factor - g/kappa
+          iglob = ibool(INDEX_IJK,ispec)
+          fac_z = minus_g(iglob) / kappastore(INDEX_IJK,ispec)
+          ! acts only in vertical direction
+          gravity_term(INDEX_IJK) = jacobianl * wgll_cube(INDEX_IJK) * fac_z * xix_regular * temp3(INDEX_IJK)
 
-        temp1(INDEX_IJK) = rho_invl * jacobianl * (xixl*dpotentialdxl + xiyl*dpotentialdyl + xizl*dpotentialdzl)
-        temp2(INDEX_IJK) = rho_invl * jacobianl * (etaxl*dpotentialdxl + etayl*dpotentialdyl + etazl*dpotentialdzl)
-        temp3(INDEX_IJK) = rho_invl * jacobianl * (gammaxl*dpotentialdxl + gammayl*dpotentialdyl + gammazl*dpotentialdzl)
-      ENDDO_LOOP_IJK
-
+          ! reciprocal of density
+          rho_invl = 1.0_CUSTOM_REAL / rhostore(INDEX_IJK,ispec)
+          ! for acoustic medium
+          temp1(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp1(INDEX_IJK)
+          temp2(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp2(INDEX_IJK)
+          temp3(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp3(INDEX_IJK)
+        ENDDO_LOOP_IJK
+      endif
     else
-      ! regular element
-      jacobianl = jacobian_regular
-      DO_LOOP_IJK
-        ! reciprocal of density
-        rho_invl = 1.0_CUSTOM_REAL / rhostore(INDEX_IJK,ispec)
-        ! for acoustic medium
-        temp1(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp1(INDEX_IJK)
-        temp2(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp2(INDEX_IJK)
-        temp3(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp3(INDEX_IJK)
-      ENDDO_LOOP_IJK
+      ! no gravity
+      ! grad(potential)
+      ispec_irreg = irregular_element_number(ispec)
+      if (ispec_irreg /= 0) then
+        ! irregular element
+        DO_LOOP_IJK
+          ! reciprocal of density
+          rho_invl = 1.0_CUSTOM_REAL / rhostore(INDEX_IJK,ispec)
+
+          ! get derivatives of ux, uy and uz with respect to x, y and z
+          ! single arrays make it difficult for hardware pre-fetching...
+          xixl = xixstore(INDEX_IJK,ispec_irreg)
+          xiyl = xiystore(INDEX_IJK,ispec_irreg)
+          xizl = xizstore(INDEX_IJK,ispec_irreg)
+          etaxl = etaxstore(INDEX_IJK,ispec_irreg)
+          etayl = etaystore(INDEX_IJK,ispec_irreg)
+          etazl = etazstore(INDEX_IJK,ispec_irreg)
+          gammaxl = gammaxstore(INDEX_IJK,ispec_irreg)
+          gammayl = gammaystore(INDEX_IJK,ispec_irreg)
+          gammazl = gammazstore(INDEX_IJK,ispec_irreg)
+          jacobianl = jacobianstore(INDEX_IJK,ispec_irreg)
+          ! using fused array instead
+          !xixl = deriv_mapping(1,INDEX_IJK,ispec_irreg)
+          !xiyl = deriv_mapping(2,INDEX_IJK,ispec_irreg)
+          !xizl = deriv_mapping(3,INDEX_IJK,ispec_irreg)
+          !etaxl = deriv_mapping(4,INDEX_IJK,ispec_irreg)
+          !etayl = deriv_mapping(5,INDEX_IJK,ispec_irreg)
+          !etazl = deriv_mapping(6,INDEX_IJK,ispec_irreg)
+          !gammaxl = deriv_mapping(7,INDEX_IJK,ispec_irreg)
+          !gammayl = deriv_mapping(8,INDEX_IJK,ispec_irreg)
+          !gammazl = deriv_mapping(9,INDEX_IJK,ispec_irreg)
+          !jacobianl = deriv_mapping(10,INDEX_IJK,ispec_irreg)
+
+          ! derivatives of potential
+          dpotentialdxl = xixl*temp1(INDEX_IJK) + etaxl*temp2(INDEX_IJK) + gammaxl*temp3(INDEX_IJK)
+          dpotentialdyl = xiyl*temp1(INDEX_IJK) + etayl*temp2(INDEX_IJK) + gammayl*temp3(INDEX_IJK)
+          dpotentialdzl = xizl*temp1(INDEX_IJK) + etazl*temp2(INDEX_IJK) + gammazl*temp3(INDEX_IJK)
+
+          temp1(INDEX_IJK) = rho_invl * jacobianl * (xixl*dpotentialdxl + xiyl*dpotentialdyl + xizl*dpotentialdzl)
+          temp2(INDEX_IJK) = rho_invl * jacobianl * (etaxl*dpotentialdxl + etayl*dpotentialdyl + etazl*dpotentialdzl)
+          temp3(INDEX_IJK) = rho_invl * jacobianl * (gammaxl*dpotentialdxl + gammayl*dpotentialdyl + gammazl*dpotentialdzl)
+        ENDDO_LOOP_IJK
+      else
+        ! regular element
+        jacobianl = jacobian_regular
+        DO_LOOP_IJK
+          ! reciprocal of density
+          rho_invl = 1.0_CUSTOM_REAL / rhostore(INDEX_IJK,ispec)
+          ! for acoustic medium
+          temp1(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp1(INDEX_IJK)
+          temp2(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp2(INDEX_IJK)
+          temp3(INDEX_IJK) = rho_invl * jacobianl * xix_regular * xix_regular * temp3(INDEX_IJK)
+        ENDDO_LOOP_IJK
+      endif
     endif
 
     ! second double-loop over GLL to compute all the terms along the x,y,z directions and assemble the contributions
@@ -325,7 +408,23 @@
       enddo
     end select
 
-    ! sum contributions from each element to the global values
+    ! sum contributions
+    DO_LOOP_IJK
+      ! add GLL integration weights
+      ! alternative 1:
+      !sum_terms(i,j,k) = - (wgllwgll_yz(j,k) * newtemp1(i,j,k) &
+      !                    + wgllwgll_xz(i,k) * newtemp2(i,j,k) &
+      !                    + wgllwgll_xy(i,j) * newtemp3(i,j,k))
+      ! or alternative 2: vectorized using (i,j,k) 3D weight arrays (faster)
+      sum_terms(INDEX_IJK) = - (wgllwgll_yz_3D(INDEX_IJK) * newtemp1(INDEX_IJK) &
+                              + wgllwgll_xz_3D(INDEX_IJK) * newtemp2(INDEX_IJK) &
+                              + wgllwgll_xy_3D(INDEX_IJK) * newtemp3(INDEX_IJK))
+    ENDDO_LOOP_IJK
+
+    ! adds gravity contribution
+    if (GRAVITY) sum_terms(:,:,:) = sum_terms(:,:,:) + gravity_term(:,:,:)
+
+    ! assembles potential array
     ! note: this loop will not fully vectorize because it contains a dependency (through indirect addressing with array ibool())
     !       thus, instead of DO_LOOP_IJK we use do k=..;do j=..;do i=..,
     !       which helps the compiler to unroll the innermost loop
@@ -333,18 +432,8 @@
       do j = 1,NGLLY
         do i = 1,NGLLX
           iglob = ibool(i,j,k,ispec)
-          ! also add GLL integration weights
-          ! alternative 1:
-          !potential_dot_dot_acoustic(iglob) = potential_dot_dot_acoustic(iglob) &
-          !     - ( wgllwgll_yz(j,k)*newtemp1(i,j,k) &
-          !       + wgllwgll_xz(i,k)*newtemp2(i,j,k) &
-          !       + wgllwgll_xy(i,j)*newtemp3(i,j,k))
-          ! or alternative 2: using (i,j,k) 3D weight arrays (faster)
 !$OMP ATOMIC
-          potential_dot_dot_acoustic(iglob) = potential_dot_dot_acoustic(iglob) &
-               - ( wgllwgll_yz_3D(i,j,k)*newtemp1(i,j,k) &
-                 + wgllwgll_xz_3D(i,j,k)*newtemp2(i,j,k) &
-                 + wgllwgll_xy_3D(i,j,k)*newtemp3(i,j,k))
+          potential_dot_dot_acoustic(iglob) = potential_dot_dot_acoustic(iglob) + sum_terms(i,j,k)
         enddo
       enddo
     enddo
