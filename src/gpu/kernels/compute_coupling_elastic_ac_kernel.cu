@@ -85,17 +85,12 @@ __global__ void compute_coupling_elastic_ac_kernel(field* potential_dot_dot_acou
       //       pressure becomes: p = - kappa ( div( s ) ) = rho ( - dot_dot_chi + g * s )
       //
       // g only acting in negative z-direction, i.e. g = - g z_hat and term + g * s = - g s_z
+      pressure = rhol * ( - potential_dot_dot_acoustic[iglob] + minus_g[iglob] * displ[iglob*3+2] * nz );
 
-      // daniel: TODO - check gravity and coupling would be displ * nz  correct?
-      pressure = rhol * ( - potential_dot_dot_acoustic[iglob] + minus_g[iglob] * displ[iglob*3+2] );
-
-      //daniel: TODO - check gravity and coupling
-      //pressure = - potential_dot_dot_acoustic[iglob] ;
+      //debug
       //if (iface == 128 && igll == 5){
-      //  printf("coupling acoustic: %f %f \n",potential_dot_dot_acoustic[iglob],
-      //             minus_g[iglob] * displ[iglob*3+2]);
+      //  printf("coupling acoustic: %f %f %f\n",potential_dot_dot_acoustic[iglob],minus_g[iglob] * displ[iglob*3+2],pressure);
       //}
-
     }else{
       // no gravity: uses potential chi such that displacement s = 1/rho grad(chi)
       //                  pressure p = - kappa ( div( s )) then becomes: p = - dot_dot_chi

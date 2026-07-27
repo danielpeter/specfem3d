@@ -103,6 +103,12 @@
       ! (note: should be the same as for corresponding i',j',k',ispec_elastic or ispec_elastic )
       iglob = ibool(i,j,k,ispec)
 
+      ! gets associated normal on GLL point
+      ! (note convention: pointing outwards of acoustic element)
+      nx = coupling_ac_el_normal(1,igll,iface)
+      ny = coupling_ac_el_normal(2,igll,iface)
+      nz = coupling_ac_el_normal(3,igll,iface)
+
       ! acoustic pressure on global point
       if (GRAVITY) then
         ! takes density (from acoustic? element)
@@ -112,9 +118,7 @@
         !       pressure becomes: p = - kappa ( div( s ) ) = rho ( - dot_dot_chi + g * s )
         !
         !  g only acting in negative z-direction, i.e. g = - g z_hat and term + g * s = - g s_z
-
-        ! daniel: TODO - check gravity and coupling would be displ * nz  correct?
-        pressure_x = rhol * ( - potential_dot_dot_acoustic(iglob) + minus_g(iglob) * displ(3,iglob) )
+        pressure_x = rhol * ( - potential_dot_dot_acoustic(iglob) + minus_g(iglob) * displ(3,iglob) * nz )
       else
         ! no gravity: uses potential chi such that displacement s = 1/rho grad(chi)
         !             pressure p = - kappa ( div( s )) then becomes: p = - dot_dot_chi
@@ -157,12 +161,6 @@
           endif
         endif
       endif
-
-      ! gets associated normal on GLL point
-      ! (note convention: pointing outwards of acoustic element)
-      nx = coupling_ac_el_normal(1,igll,iface)
-      ny = coupling_ac_el_normal(2,igll,iface)
-      nz = coupling_ac_el_normal(3,igll,iface)
 
       ! gets associated, weighted 2D jacobian
       ! (note: should be the same for elastic and acoustic element)
