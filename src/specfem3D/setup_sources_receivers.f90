@@ -685,6 +685,9 @@
   integer :: isource,ixmin,ixmax,iymin,iymax,izmin,izmax,iface,ispec
   logical :: is_on,is_on_all
 
+  ! check only for non-gravity simulations
+  if (GRAVITY) return
+
   ! outputs a warning in case of an acoustic source lying on the free surface
   do isource = 1,NSOURCES
     ! checks if source is close to face
@@ -1044,6 +1047,9 @@
 
   integer :: irec,ixmin,ixmax,iymin,iymax,izmin,izmax,iface,ispec
   logical :: is_on,is_on_all
+
+  ! check only for non-gravity simulations
+  if (GRAVITY) return
 
   ! outputs a warning in case the receiver is lying on the free surface
   do irec = 1,nrec
