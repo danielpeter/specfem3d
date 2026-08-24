@@ -128,9 +128,11 @@ incr_dx = 0.0045
 # sampling fine (~110m)
 #incr_dx = 0.001
 
+# second shifted topography
+use_topo_shifted = False
+
 # topography shift for 2nd interface (shifts original topography downwards)
 toposhift = 8000.0
-#toposhift = 1000.0 (small, local meshes)
 
 # scaling factor for topography variations
 toposcale = 0.1
@@ -147,8 +149,8 @@ gmt_country = ''  # for Switzerland: '-ECH'
 utm_zone = 0
 gmt_region = ""
 projMerc = 'UTM'
-use_moon_ltm = False  # for moon topography outputs
-
+use_moon_ltm = False      # for moon topography outputs
+clean_out_files = False   # by default, keep intermediate file outputs
 
 def get_topo_DEM(region,filename_path,res='low'):
     """
@@ -270,6 +272,7 @@ def get_topo(lon_min,lat_min,lon_max,lat_max):
     global gmt_region
     global utm_zone
     global use_moon_ltm,projMerc
+    global clean_out_files
 
     # region format: #lon_min #lat_min #lon_max #lat_max (left bottom right top) in degrees
     # for example: region = (12.35, 41.8, 12.65, 42.0)
@@ -617,6 +620,21 @@ def get_topo(lon_min,lat_min,lon_max,lat_max):
     # map
     plot_map(gmt_region)
 
+    # clean
+    if clean_out_files:
+        # cleanup
+        cmd = 'rm -f ' + 'ptopo.xyz.org' + ';'
+        cmd += 'rm -f ' + 'ptopo-DEM.grd' + ';'
+        if filename: cmd += 'rm -f ' + filename + ';'
+        if gif_file: cmd += 'rm -f ' + gif_file + ';'
+        if gridfile: cmd += 'rm -f ' + gridfile + ';'
+        if xyz_file: cmd += 'rm -f ' + xyz_file + '.hillshaded1.gif' + ';'
+        if xyz_file: cmd += 'rm -f ' + xyz_file + '.hillshaded2.gif' + ';'
+        print("  > ",cmd)
+        status = subprocess.call(cmd, shell=True)
+        check_status(status)
+        print("")
+
     return xyz_file
 
 #
@@ -625,6 +643,7 @@ def get_topo(lon_min,lat_min,lon_max,lat_max):
 
 def plot_map(gmt_region,gridfile="ptopo.sampled.grd"):
     global datadir
+    global clean_out_files
 
     print("*******************************")
     print("plotting map ...")
@@ -665,6 +684,17 @@ def plot_map(gmt_region,gridfile="ptopo.sampled.grd"):
     check_status(status)
     print("  map plotted in file: ",pdf_file)
     print("")
+
+    # clean
+    if clean_out_files:
+        cmd = 'rm -f ' + 'ptopo.cpt' + ';'
+        cmd += 'rm -f ' + 'ptopogradient.grd' + ';'
+        if ps_file: cmd += 'rm -f ' + ps_file + ';'
+        print("  > ",cmd)
+        status = subprocess.call(cmd, shell=True)
+        check_status(status)
+        print("")
+
     return
 
 #
@@ -676,6 +706,7 @@ def create_AVS_file():
     global utm_zone
     global gmt_region,gmt_country
     global use_moon_ltm
+    global clean_out_files
 
     # only output borders for Earth...
     if use_moon_ltm: return
@@ -862,6 +893,16 @@ def create_AVS_file():
 
     print("  see file: %s" % avsfile)
     print("")
+
+    # clean
+    if clean_out_files:
+        if name:
+            cmd = 'rm -f ' + name + ';'
+            print("  > ",cmd)
+            status = subprocess.call(cmd, shell=True)
+            check_status(status)
+            print("")
+
     return
 
 #
@@ -869,8 +910,7 @@ def create_AVS_file():
 #
 
 def topo_extract(filename):
-    global toposhift
-    global toposcale
+    global use_topo_shifted,toposhift,toposcale
 
     # ./topo_extract.sh ptopo.mean.xyz
     #cmd = './topo_extract.sh ptopo.mean.xyz'
@@ -878,13 +918,18 @@ def topo_extract(filename):
     print("extracting interface data for xmeshfem3D ...")
     print("*******************************")
 
-    ## shift/downscale topography
-    print("  topo shift   = ",toposhift,"(m)")
-    print("  scale factor = ",toposcale)
-    print("")
+    if not filename:
+        print("Error: empty file name")
+        sys.exit(1)
 
     file1 = filename + '.1.dat'
-    file2 = filename + '.2.dat'
+
+    ## shift/downscale topography
+    if use_topo_shifted:
+        print("  topo shift   = ",toposhift,"(m)")
+        print("  scale factor = ",toposcale)
+        print("")
+        file2 = filename + '.2.dat'
 
     # statistics
     cmd = 'gmt gmtinfo ' + filename
@@ -895,7 +940,8 @@ def topo_extract(filename):
 
     # cleanup
     cmd = 'rm -f ' + file1 + ';'
-    cmd += 'rm -f ' + file2 + ';'
+    if use_topo_shifted:
+        if file2: cmd += 'rm -f ' + file2 + ';'
     print("  > ",cmd)
     status = subprocess.call(cmd, shell=True)
     check_status(status)
@@ -913,17 +959,21 @@ def topo_extract(filename):
         for i in range(0,len(elevation)):
             f.write("%f\n" % (elevation[i]) )
 
-    # shifts topography surface down,
-    with open(file2,'w') as f:
-        for i in range(0,len(elevation)):
-            f.write("%f\n" % (elevation[i] * toposcale - toposhift) )
-
     print("")
-    print("  check: ",file1,file2)
+    print("  check: ",file1)
+
+    # shifts topography surface down
+    if use_topo_shifted:
+        with open(file2,'w') as f:
+            for i in range(0,len(elevation)):
+                f.write("%f\n" % (elevation[i] * toposcale - toposhift) )
+        print("  check: ",file2)
+
     print("")
 
     cmd = 'gmt gmtinfo ' + file1 + ';'
-    cmd += 'gmt gmtinfo ' + file2 + ';'
+    if use_topo_shifted:
+        cmd += 'gmt gmtinfo ' + file2 + ';'
     print("  > ",cmd)
     status = subprocess.call(cmd, shell=True)
     check_status(status)
@@ -996,6 +1046,7 @@ def check_status(status):
 def update_Mesh_Par_file(dir,lon_min,lat_min,lon_max,lat_max,nx,ny,dx,dy,interface_region,xyz_file):
     global datadir
     global utm_zone
+    global use_topo_shifted
 
     # change working directory back to DATA/
     path = dir + '/' + 'DATA/meshfem3D_files/'
@@ -1079,13 +1130,26 @@ def update_Mesh_Par_file(dir,lon_min,lat_min,lon_max,lat_max,nx,ny,dx,dy,interfa
     check_status(status)
     print("")
 
+    if not datadir:
+        print("Error: empty data dir name")
+        sys.exit(1)
+
     # link to topography files
     topodir = '../../' + datadir
+
+    if not xyz_file:
+        print("Error: empty xyz_file name")
+        sys.exit(1)
+
     xyz_file1 = xyz_file + '.1.dat'
-    xyz_file2 = xyz_file + '.2.dat'
-    cmd = 'rm -f ' + xyz_file1 + ' ' + xyz_file2 + ';'
+    cmd = 'rm -f ' + xyz_file1 + ';'
     cmd += 'ln -s ' + topodir + '/' + xyz_file1 + ';'
-    cmd += 'ln -s ' + topodir + '/' + xyz_file2 + ';'
+
+    if use_topo_shifted:
+        xyz_file2 = xyz_file + '.2.dat'
+        cmd += 'rm -f ' + xyz_file2 + ';'
+        cmd += 'ln -s ' + topodir + '/' + xyz_file2 + ';'
+
     print("  > ",cmd)
     status = subprocess.call(cmd, shell=True)
     check_status(status)
@@ -1632,6 +1696,10 @@ def convert_lonlat2utm(file_in,zone,file_out):
     # checks argument
     if abs(zone) < 1 or abs(zone) > 60:  sys.exit("error zone: zone not UTM zone")
 
+    if not file_in:
+        print("Error: empty input file name")
+        sys.exit(1)
+
     # grab all the locations in file
     with open(file_in,'r') as f:
         content = f.readlines()
@@ -1639,6 +1707,10 @@ def convert_lonlat2utm(file_in,zone,file_out):
     nlines = len(content)
     print("  number of lines: %i" % nlines)
     print("")
+    if nlines == 0:
+        print("Error: no data lines in input file, exiting...")
+        sys.exit(1)
+
     print("  output file: " + file_out)
     print("  format: #UTM_x #UTM_y #elevation")
 
@@ -1672,9 +1744,11 @@ def setup_simulation(lon_min,lat_min,lon_max,lat_max):
     """
     global datadir
     global utm_zone
-    global incr_dx,toposhift,toposcale
+    global incr_dx
+    global use_topo_shifted,toposhift,toposcale
     global SRTM_type
     global use_moon_ltm,projMerc
+    global clean_out_files
 
     print("")
     print("*******************************")
@@ -1683,8 +1757,9 @@ def setup_simulation(lon_min,lat_min,lon_max,lat_max):
     print("")
     print("  topo                  : ",SRTM_type)
     print("  grid sampling interval: ",incr_dx,"(deg) ",incr_dx * math.pi/180.0 * 6371.0, "(km)")
-    print("  topo down shift       : ",toposhift)
-    print("  topo down scaling     : ",toposcale)
+    if use_topo_shifted:
+        print("  topo down shift       : ",toposhift)
+        print("  topo down scaling     : ",toposcale)
     print("")
 
     # current directory
@@ -1808,6 +1883,18 @@ def setup_simulation(lon_min,lat_min,lon_max,lat_max):
     # mesher Mesh_Par_file
     update_Mesh_Par_file(dir,lon_min,lat_min,lon_max,lat_max,nx,ny,dx,dy,interface_region,xyz_file)
 
+    # clean
+    if clean_out_files:
+        # cleanup files in topo_data/ directory
+        os.chdir(path)
+        cmd = 'rm -f ' + 'ptopo.xyz' + ';'
+        if utm_file: cmd += 'rm -f ' + utm_file + ';'
+        if os.path.isfile('gmt.history'): cmd += 'rm -f ' + 'gmt.history' + ';'
+        print("  > ",cmd)
+        status = subprocess.call(cmd, shell=True)
+        check_status(status)
+        print("")
+
     print("")
     print("topo output in directory: ",datadir)
     print("")
@@ -1825,7 +1912,7 @@ def usage():
     # default increment in km
     incr_dx_km = incr_dx * math.pi/180.0 * 6371.0
 
-    print("usage: ./run_get_simulation_topography.py lon_min lat_min lon_max lat_max [--SRTM=SRTM] [--dx=incr_dx] [--toposhift=toposhift] [--toposcale=toposcale]")
+    print("usage: ./run_get_simulation_topography.py lon_min lat_min lon_max lat_max [--SRTM=SRTM] [--dx=incr_dx] [--toposhift=toposhift] [--toposcale=toposcale] [--clean]")
     print("   where")
     print("       lon_min lat_min lon_max lat_max - region given by points: left bottom right top")
     print("                                         for example: 12.35 42.0 12.65 41.8 (Rome)")
@@ -1843,6 +1930,7 @@ def usage():
     print("       toposhift                       - (optional) topography shift for 2nd interface (in m)")
     print("                                         to shift original topography downwards [default %f m]" % toposhift)
     print("       toposcale                       - (optional) scalefactor to topography for shifted 2nd interface (e.g., 0.1) [default %f]" %toposcale)
+    print("       clean                           - (optional) cleans out informative files, only keeps important ones")
     sys.exit(1)
 
 if __name__ == '__main__':
@@ -1868,12 +1956,17 @@ if __name__ == '__main__':
             elif "--dx=" in arg:
                 # GMT grid sampling interval
                 incr_dx = float(arg.split('=')[1])
-            elif "--toposhift=" in arg:
+            elif "--toposhift" in arg:
                 # topography shift for 2nd interface
-                toposhift = float(arg.split('=')[1])
-            elif "--toposcale=" in arg:
+                use_topo_shifted = True
+                if len(arg.split('=')) > 1:
+                    toposhift = float(arg.split('=')[1])
+            elif "--toposcale" in arg:
                 # topography scalefactor
-                toposcale = float(arg.split('=')[1])
+                if len(arg.split('=')) > 1:
+                    toposcale = float(arg.split('=')[1])
+            elif "--clean" in arg:
+                clean_out_files = True
             elif i >= 5:
                 print("argument not recognized: ",arg)
                 usage()
