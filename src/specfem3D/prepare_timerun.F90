@@ -55,11 +55,17 @@
   ! user output infos
   call prepare_timerun_user_output()
 
-  ! sets up mass matrices
-  call prepare_mass_matrices()
-
   ! sets up time increments
   call prepare_timerun_constants()
+
+  ! prepares rotation
+  call prepare_timerun_rotation()
+
+  ! prepares gravity arrays
+  call prepare_gravity()
+
+  ! sets up mass matrices
+  call prepare_mass_matrices()
 
   ! initializes arrays
   call prepare_wavefields()
@@ -69,12 +75,6 @@
 
   ! prepares attenuation arrays
   call prepare_attenuation()
-
-  ! prepares gravity arrays
-  call prepare_gravity()
-
-  ! prepares rotation
-  call prepare_rotation()
 
   ! prepares LDDRK time scheme
   ! note: do not use if (USE_LDDRK) call prepare_timerun_lddrk()
@@ -1448,7 +1448,7 @@
 !-------------------------------------------------------------------------------------------------
 !
 
-  subroutine prepare_rotation()
+  subroutine prepare_timerun_rotation()
 
   use specfem_par
 
@@ -1490,7 +1490,7 @@
       b_two_omega_rotation(:) = - real( 2.d0 * ROTATION_OMEGA(:),kind=CUSTOM_REAL)
     endif
   case default
-    stop 'Invalid SIMULATION_TYPE in prepare_rotation()'
+    stop 'Invalid SIMULATION_TYPE in prepare_timerun_rotation()'
   end select
 
-  end subroutine prepare_rotation
+  end subroutine prepare_timerun_rotation

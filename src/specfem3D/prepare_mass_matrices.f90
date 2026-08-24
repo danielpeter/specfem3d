@@ -401,8 +401,10 @@
         i = free_surface_ijk(1,igll,iface)
         j = free_surface_ijk(2,igll,iface)
         k = free_surface_ijk(3,igll,iface)
+
         iglob = ibool(i,j,k,ispec)
 
+        ! g & rho
         gravityl = dabs(dble(minus_g(iglob)))
         rhol = dble(rhostore(i,j,k,ispec))
 
