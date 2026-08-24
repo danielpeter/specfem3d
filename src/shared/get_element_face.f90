@@ -49,9 +49,9 @@
   real(kind=CUSTOM_REAL),dimension(nglob),intent(in) :: xstore_unique,ystore_unique,zstore_unique
 
   ! local parameters
-  real(kind=CUSTOM_REAL) :: xcoord_face,ycoord_face,zcoord_face
-  real(kind=CUSTOM_REAL) :: midpoint_faces(NDIM,6),midpoint(NDIM),midpoint_distances(6)
-  real(kind=CUSTOM_REAL) :: edge_length,avg_factor
+  double precision :: xcoord_face,ycoord_face,zcoord_face,dx,dy,dz
+  double precision :: midpoint_faces(NDIM,6),midpoint(NDIM),midpoint_distances(6)
+  double precision :: edge_length,avg_factor
 
   ! corners indices of reference cube faces
   ! shapes of arrays below
@@ -83,23 +83,23 @@
                   iface5_corner_ijk,iface6_corner_ijk /),all_faces_shape)
 
   ! face orientation
-  integer  :: ifa,icorner,i,j,k,iglob,iloc(1)
+  integer  :: ifa,icorner,i,j,k,iglob,iloc(1),best_face
 
   ! initializes
   iface_id = -1
-  avg_factor = 1.0_CUSTOM_REAL / NGNOD2D_FOUR_CORNERS
+  avg_factor = 1.d0 / NGNOD2D_FOUR_CORNERS
 
   ! gets face midpoint by its corners
-  midpoint(:) = 0.0_CUSTOM_REAL
+  midpoint(:) = 0.d0
   do icorner = 1,NGNOD2D_FOUR_CORNERS
-    midpoint(1) = midpoint(1) + xcoord(icorner)
-    midpoint(2) = midpoint(2) + ycoord(icorner)
-    midpoint(3) = midpoint(3) + zcoord(icorner)
+    midpoint(1) = midpoint(1) + dble(xcoord(icorner))
+    midpoint(2) = midpoint(2) + dble(ycoord(icorner))
+    midpoint(3) = midpoint(3) + dble(zcoord(icorner))
   enddo
   midpoint(:) = midpoint(:) * avg_factor
 
 ! determines element face by minimum distance of midpoints
-  midpoint_faces(:,:) = 0.0_CUSTOM_REAL
+  midpoint_faces(:,:) = 0.d0
   do ifa = 1,6
 
     ! face corners
@@ -110,9 +110,9 @@
 
       ! coordinates
       iglob = ibool(i,j,k,ispec)
-      xcoord_face = xstore_unique(iglob)
-      ycoord_face = ystore_unique(iglob)
-      zcoord_face = zstore_unique(iglob)
+      xcoord_face = dble(xstore_unique(iglob))
+      ycoord_face = dble(ystore_unique(iglob))
+      zcoord_face = dble(zstore_unique(iglob))
 
       ! face midpoint coordinates
       midpoint_faces(1,ifa) =  midpoint_faces(1,ifa) + xcoord_face
@@ -121,29 +121,36 @@
     enddo
     midpoint_faces(:,ifa) = midpoint_faces(:,ifa) * avg_factor
 
+    ! distances of current face midpoint to target midpoint
+    dx = midpoint(1) - midpoint_faces(1,ifa)
+    dy = midpoint(2) - midpoint_faces(2,ifa)
+    dz = midpoint(3) - midpoint_faces(3,ifa)
+
     ! distance squared
-    midpoint_distances(ifa) = (midpoint(1)-midpoint_faces(1,ifa))**2 &
-                            + (midpoint(2)-midpoint_faces(2,ifa))**2 &
-                            + (midpoint(3)-midpoint_faces(3,ifa))**2
+    midpoint_distances(ifa) = dx*dx + dy*dy + dz*dz
   enddo
 
   ! gets closest point, which determines face
   iloc = minloc(midpoint_distances)
+  best_face = iloc(1)
 
   ! checks that found midpoint is close enough
   !
   ! note: distance is relative. depending on the mesh, coordinate points might vary on very small ( < 1mm) or large (>1km) scales.
   !       the check here takes the first edge of the surface element as a proxy for the scale
-  edge_length = (xcoord(1)-xcoord(2))**2 + (ycoord(1)-ycoord(2))**2 + (zcoord(1)-zcoord(2))**2
+  dx = dble(xcoord(1)) - dble(xcoord(2))
+  dy = dble(ycoord(1)) - dble(ycoord(2))
+  dz = dble(zcoord(1)) - dble(zcoord(2))
+  edge_length = dx*dx + dy*dy + dz*dz
 
-  if (midpoint_distances(iloc(1)) > TOLERANCE_FACE_DETECTION * edge_length) then
-    print *,'error element face midpoint distance:',midpoint_distances(iloc(1)), &
+  if (midpoint_distances(best_face) > TOLERANCE_FACE_DETECTION * edge_length) then
+    print *,'error element face midpoint distance:',midpoint_distances(best_face), &
             ' - edge length:',edge_length,' tolerance:',TOLERANCE_FACE_DETECTION*edge_length,TOLERANCE_FACE_DETECTION
     ! corner locations
     do icorner = 1,NGNOD2D_FOUR_CORNERS
-      i = iface_all_corner_ijk(1,icorner,iloc(1))
-      j = iface_all_corner_ijk(2,icorner,iloc(1))
-      k = iface_all_corner_ijk(3,icorner,iloc(1))
+      i = iface_all_corner_ijk(1,icorner,best_face)
+      j = iface_all_corner_ijk(2,icorner,best_face)
+      k = iface_all_corner_ijk(3,icorner,best_face)
       iglob = ibool(i,j,k,ispec)
       print *,'error corner:',icorner,'xyz:',xstore_unique(iglob),ystore_unique(iglob),zstore_unique(iglob)
     enddo
@@ -153,11 +160,11 @@
     enddo
     ! midpoints
     print *,'midpoint      :',midpoint(1),midpoint(2),midpoint(3)
-    print *,'midpoint face :',midpoint_faces(1,iloc(1)),midpoint_faces(2,iloc(1)),midpoint_faces(3,iloc(1))
+    print *,'midpoint face :',midpoint_faces(1,best_face),midpoint_faces(2,best_face),midpoint_faces(3,best_face)
     ! stop
     stop 'error element face midpoint'
   else
-    iface_id = iloc(1)
+    iface_id = best_face
   endif
 
   end subroutine get_element_face_id
@@ -316,14 +323,27 @@
   real(kind=CUSTOM_REAL),dimension(NDIM),intent(inout) :: normal
 
   ! local parameters
-  real(kind=CUSTOM_REAL) :: face_n(NDIM),tmp,v_tmp(NDIM)
+  double precision :: face_n(NDIM),tmp,v_tmp(NDIM)
+  double precision :: x1,x2,x3,y1,y2,y3,z1,z2,z3
   integer :: iglob
 
   ! determines initial orientation given by three corners on the face
   ! cross-product of vectors from corner 1 to corner 2 and from corner 1 to corner 3
-  face_n(1) =   (ycoord(2)-ycoord(1))*(zcoord(3)-zcoord(1)) - (zcoord(2)-zcoord(1))*(ycoord(3)-ycoord(1))
-  face_n(2) = - (xcoord(2)-xcoord(1))*(zcoord(3)-zcoord(1)) + (zcoord(2)-zcoord(1))*(xcoord(3)-xcoord(1))
-  face_n(3) =   (xcoord(2)-xcoord(1))*(ycoord(3)-ycoord(1)) - (ycoord(2)-ycoord(1))*(xcoord(3)-xcoord(1))
+  x1 = dble(xcoord(1))
+  x2 = dble(xcoord(2))
+  x3 = dble(xcoord(3))
+
+  y1 = dble(ycoord(1))
+  y2 = dble(ycoord(2))
+  y3 = dble(ycoord(3))
+
+  z1 = dble(zcoord(1))
+  z2 = dble(zcoord(2))
+  z3 = dble(zcoord(3))
+
+  face_n(1) =   (y2 - y1)*(z3 - z1) - (z2 - z1)*(y3 - y1)
+  face_n(2) = - (x2 - x1)*(z3 - z1) + (z2 - z1)*(x3 - x1)
+  face_n(3) =   (x2 - x1)*(y3 - y1) - (y2 - y1)*(x3 - x1)
 
   tmp = sqrt( face_n(1)*face_n(1) + face_n(2)*face_n(2) + face_n(3)*face_n(3) )
   if (abs(tmp) < TINYVAL) then
@@ -331,7 +351,7 @@
     print *,'normal:',face_n(:)
     call exit_mpi(0,'error get element face normal')
   endif
-  face_n(:) = face_n(:)/tmp
+  face_n(:) = face_n(:) / tmp
 
   ! checks that this normal direction is outwards of element:
   ! takes additional corner out of face plane and determines scalar product (dot product) to normal
@@ -354,31 +374,31 @@
   end select
 
   ! vector from corner 1 to this opposite one
-  v_tmp(1) = xstore_unique(iglob) - xcoord(1)
-  v_tmp(2) = ystore_unique(iglob) - ycoord(1)
-  v_tmp(3) = zstore_unique(iglob) - zcoord(1)
+  v_tmp(1) = dble(xstore_unique(iglob)) - dble(xcoord(1))
+  v_tmp(2) = dble(ystore_unique(iglob)) - dble(ycoord(1))
+  v_tmp(3) = dble(zstore_unique(iglob)) - dble(zcoord(1))
 
   ! scalar product (dot product)
   tmp = v_tmp(1)*face_n(1) + v_tmp(2)*face_n(2) + v_tmp(3)*face_n(3)
 
   ! makes sure normal points outwards, that is points away from this additional corner
   ! and scalar product (dot product) is negative
-  if (tmp > 0.0_CUSTOM_REAL) then
+  if (tmp > 0.d0) then
     face_n(:) = - face_n(:)
   endif
 
   ! in case given normal has zero length, sets it to computed face normal
   ! note: to avoid floating-point exception we use dble()
   !         values of normal(:) could be very small, almost zero, and lead to underflow
-  tmp = sngl(dble(normal(1))**2 + dble(normal(2))**2 + dble(normal(3))**2)
+  tmp = dble(normal(1))**2 + dble(normal(2))**2 + dble(normal(3))**2
   if (tmp < TINYVAL) then
-    normal(:) = face_n(:)
+    normal(:) = real(face_n(:),kind=CUSTOM_REAL)
     return
   endif
 
   ! otherwise determines orientation of normal and flips direction such that normal points outwards
   tmp = face_n(1)*normal(1) + face_n(2)*normal(2) + face_n(3)*normal(3)
-  if (tmp < 0.0_CUSTOM_REAL) then
+  if (tmp < 0.d0) then
     !swap
     normal(:) = - normal(:)
   endif
@@ -429,13 +449,26 @@
 
 !  local parameters
   real(kind=CUSTOM_REAL) :: face_n(3),tmp,v_tmp(3)
+  double precision :: x1,x2,x3,y1,y2,y3,z1,z2,z3
   integer :: iglob
 
   ! determines initial orientation given by three corners on the face
   ! cross-product of vectors from corner 1 to corner 2 and from corner 1 to corner 3
-  face_n(1) =   (ycoord(2)-ycoord(1))*(zcoord(3)-zcoord(1)) - (zcoord(2)-zcoord(1))*(ycoord(3)-ycoord(1))
-  face_n(2) = - (xcoord(2)-xcoord(1))*(zcoord(3)-zcoord(1)) + (zcoord(2)-zcoord(1))*(xcoord(3)-xcoord(1))
-  face_n(3) =   (xcoord(2)-xcoord(1))*(ycoord(3)-ycoord(1)) - (ycoord(2)-ycoord(1))*(xcoord(3)-xcoord(1))
+  x1 = dble(xcoord(1))
+  x2 = dble(xcoord(2))
+  x3 = dble(xcoord(3))
+
+  y1 = dble(ycoord(1))
+  y2 = dble(ycoord(2))
+  y3 = dble(ycoord(3))
+
+  z1 = dble(zcoord(1))
+  z2 = dble(zcoord(2))
+  z3 = dble(zcoord(3))
+
+  face_n(1) =   (y2 - y1)*(z3 - z1) - (z2 - z1)*(y3 - y1)
+  face_n(2) = - (x2 - x1)*(z3 - z1) + (z2 - z1)*(x3 - x1)
+  face_n(3) =   (x2 - x1)*(y3 - y1) - (y2 - y1)*(x3 - x1)
 
   tmp = sqrt( face_n(1)**2 + face_n(2)**2 + face_n(3)**2)
   if (abs(tmp) < TINYVAL) then
@@ -443,7 +476,7 @@
     print *,'normal:',face_n(:)
     call exit_mpi(0,'error get element face normal')
   endif
-  face_n(:) = face_n(:)/tmp
+  face_n(:) = face_n(:) / tmp
 
   ! checks that this normal direction is outwards of element:
   ! takes additional corner out of face plane and determines scalar product (dot product) to normal
@@ -466,20 +499,20 @@
   end select
 
   ! vector from corner 1 to this opposite one
-  v_tmp(1) = xstore_unique(iglob) - xcoord(1)
-  v_tmp(2) = ystore_unique(iglob) - ycoord(1)
-  v_tmp(3) = zstore_unique(iglob) - zcoord(1)
+  v_tmp(1) = dble(xstore_unique(iglob)) - dble(xcoord(1))
+  v_tmp(2) = dble(ystore_unique(iglob)) - dble(ycoord(1))
+  v_tmp(3) = dble(zstore_unique(iglob)) - dble(zcoord(1))
 
   ! scalar product (dot product)
   tmp = v_tmp(1)*face_n(1) + v_tmp(2)*face_n(2) + v_tmp(3)*face_n(3)
 
   ! makes sure normal points outwards, that is points away from this additional corner and scalar product (dot product) is negative
-  if (tmp > 0.0) then
+  if (tmp > 0.d0) then
     face_n(:) = - face_n(:)
   endif
 
   ! in case given normal has zero length, exit
-  if (( normal(1)**2 + normal(2)**2 + normal(3)**2) < TINYVAL) then
+  if (( dble(normal(1))**2 + dble(normal(2))**2 + dble(normal(3))**2) < TINYVAL) then
     print *,'problem: given normal is zero'
     idirect = 0
     return
@@ -487,7 +520,7 @@
 
   ! otherwise determines orientation of normal
   tmp = face_n(1)*normal(1) + face_n(2)*normal(2) + face_n(3)*normal(3)
-  if (tmp < 0.0) then
+  if (tmp < 0.d0) then
     ! points into element
     idirect = 2
   else
