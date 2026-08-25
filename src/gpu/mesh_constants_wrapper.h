@@ -279,12 +279,12 @@ static inline void gpuMemset_int(int* d_array, const size_t size, int value){
   // sets value for array on device
 #ifdef USE_CUDA
   if (run_cuda){
-    print_CUDA_error_if_any(cudaMemset(d_array,value,size*sizeof(int)),2301);
+    print_CUDA_error_if_any(cudaMemset(d_array, value, size*sizeof(int)),2301);
   }
 #endif
 #ifdef USE_HIP
   if (run_hip){
-    print_HIP_error_if_any(hipMemset(d_array,value,size*sizeof(int)),2301);
+    print_HIP_error_if_any(hipMemset(d_array, value, size*sizeof(int)),2301);
   }
 #endif
 }

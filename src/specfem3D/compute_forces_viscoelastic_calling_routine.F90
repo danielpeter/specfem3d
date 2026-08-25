@@ -421,11 +421,9 @@
   if (APPROXIMATE_OCEAN_LOAD) then
     if (.not. GPU_MODE) then
       ! on CPU
-      call compute_coupling_ocean(NSPEC_AB,NGLOB_AB, &
-                                  ibool,rmassx,rmassy,rmassz, &
-                                  rmass_ocean_load,accel, &
-                                  free_surface_normal,free_surface_ijk,free_surface_ispec, &
-                                  num_free_surface_faces)
+      call compute_coupling_ocean(NGLOB_AB,accel,&
+                                  rmassx,rmassy,rmassz, &
+                                  npoin_oceans,ibool_ocean_load,rmass_ocean_load_selected,normal_ocean_load)
     else
       ! on GPU
       call compute_coupling_ocean_cuda(Mesh_pointer,1) ! 1 == forward
@@ -699,13 +697,9 @@
   if (APPROXIMATE_OCEAN_LOAD) then
     if (.not. GPU_MODE) then
       ! on CPU
-      call compute_coupling_ocean_backward(NSPEC_AB,NGLOB_AB, &
-                                           ibool,rmassx,rmassy,rmassz, &
-                                           rmass_ocean_load, &
-                                           free_surface_normal,free_surface_ijk,free_surface_ispec, &
-                                           num_free_surface_faces, &
-                                           SIMULATION_TYPE, &
-                                           NGLOB_ADJOINT,b_accel)
+      call compute_coupling_ocean(NGLOB_AB,b_accel,&
+                                  rmassx,rmassy,rmassz, &
+                                  npoin_oceans,ibool_ocean_load,rmass_ocean_load_selected,normal_ocean_load)
     else
       ! on GPU
       call compute_coupling_ocean_cuda(Mesh_pointer,3) ! 3 == backward

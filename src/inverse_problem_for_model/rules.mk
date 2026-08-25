@@ -182,6 +182,7 @@ inverse_problem_for_model_OBJECTS += \
 	$O/prepare_gravity.spec.o \
 	$O/prepare_mass_matrices.spec.o \
 	$O/prepare_noise.spec.o \
+	$O/prepare_oceans.spec.o \
 	$O/prepare_optimized_arrays.spec.o \
 	$O/prepare_timerun.spec.o \
 	$O/prepare_wavefields.spec.o \

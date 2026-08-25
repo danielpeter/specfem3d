@@ -716,12 +716,7 @@ void FC_FUNC_(prepare_fields_elastic_device,
                                              realw* factor_common_kappa,
                                              realw* alphaval,realw* betaval,realw* gammaval,
                                              int* APPROXIMATE_OCEAN_LOAD,
-                                             realw* rmass_ocean_load,
                                              int* NOISE_TOMOGRAPHY,
-                                             realw* free_surface_normal,
-                                             int* free_surface_ispec,
-                                             int* free_surface_ijk,
-                                             int* num_free_surface_faces,
                                              int* ACOUSTIC_SIMULATION,
                                              int* num_colors_outer_elastic,
                                              int* num_colors_inner_elastic,
@@ -1007,28 +1002,7 @@ void FC_FUNC_(prepare_fields_elastic_device,
 
   // ocean load approximation
   mp->approximate_ocean_load = *APPROXIMATE_OCEAN_LOAD;
-  if (mp->approximate_ocean_load){
-    // debug
-    //printf("prepare_fields_elastic_device: rank %d - ocean load setup\n",mp->myrank);
-    //synchronize_mpi();
-
-    // oceans needs a free surface
-    mp->num_free_surface_faces = *num_free_surface_faces;
-    if (mp->num_free_surface_faces > 0){
-      // mass matrix
-      gpuCreateCopy_todevice_realw((void**)&mp->d_rmass_ocean_load,rmass_ocean_load,mp->NGLOB_AB);
-      // surface normal
-      gpuCreateCopy_todevice_realw((void**)&mp->d_free_surface_normal,free_surface_normal,3*NGLL2*(mp->num_free_surface_faces));
-      // temporary global array: used to synchronize updates on global accel array
-      gpuMalloc_int((void**)&(mp->d_updated_dof_ocean_load),mp->NGLOB_AB);
-
-      if (*NOISE_TOMOGRAPHY == 0 && *ACOUSTIC_SIMULATION == 0){
-        gpuCreateCopy_todevice_int((void**)&mp->d_free_surface_ispec,free_surface_ispec,mp->num_free_surface_faces);
-        gpuCreateCopy_todevice_int((void**)&mp->d_free_surface_ijk,free_surface_ijk,
-                             3*NGLL2*mp->num_free_surface_faces);
-      }
-    }
-  }
+  mp->npoin_oceans = 0;
 
   // mesh coloring
   if (mp->use_mesh_coloring_gpu){
@@ -1219,6 +1193,47 @@ void FC_FUNC_(prepare_fields_elastic_adj_dev,
   //synchronize_mpi();
 
   GPU_ERROR_CHECKING("prepare_fields_elastic_adj_dev");
+}
+
+/*----------------------------------------------------------------------------------------------- */
+
+// OCEANS
+
+/*----------------------------------------------------------------------------------------------- */
+
+extern EXTERN_LANG
+void FC_FUNC_ (prepare_oceans_device,
+               PREPARE_OCEANS_DEVICE) (long *Mesh_pointer,
+                                       int *npoin_oceans,
+                                       int *h_iglob_ocean_load,
+                                       realw *h_rmass_ocean_load_selected,
+                                       realw *h_normal_ocean_load) {
+
+  TRACE ("prepare_oceans_device");
+  Mesh *mp = (Mesh *) *Mesh_pointer;
+
+  // checks if call is consistent w/ flag
+  if (! mp->approximate_ocean_load){ exit_on_error("prepare_oceans_device: approximate_ocean_load flag not set\n"); }
+
+  // arrays with global points on ocean surface
+  mp->npoin_oceans = *npoin_oceans;
+
+  // checks if anything to do
+  if (mp->npoin_oceans <= 0) return;
+
+  // global point indices
+  gpuCreateCopy_todevice_int((void**)&mp->d_ibool_ocean_load, h_iglob_ocean_load, mp->npoin_oceans);
+
+  // mass matrix
+  gpuCreateCopy_todevice_realw((void**)&mp->d_rmass_ocean_load, h_rmass_ocean_load_selected, mp->npoin_oceans);
+
+  // normals
+  gpuCreateCopy_todevice_realw((void**)&mp->d_normal_ocean_load, h_normal_ocean_load, NDIM * mp->npoin_oceans);
+
+  // synchronizes gpu calls
+  gpuSynchronize();
+
+  GPU_ERROR_CHECKING ("prepare_oceans_device");
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -1446,9 +1461,10 @@ void FC_FUNC_(prepare_fields_noise_device,
 
   // free surface
   mp->num_free_surface_faces = *num_free_surface_faces;
-
-  gpuCreateCopy_todevice_int((void**)&mp->d_free_surface_ispec,free_surface_ispec,mp->num_free_surface_faces);
-  gpuCreateCopy_todevice_int((void**)&mp->d_free_surface_ijk,free_surface_ijk,NDIM*NGLL2*mp->num_free_surface_faces);
+  if (mp->num_free_surface_faces > 0){
+    gpuCreateCopy_todevice_int((void**)&mp->d_free_surface_ispec,free_surface_ispec,mp->num_free_surface_faces);
+    gpuCreateCopy_todevice_int((void**)&mp->d_free_surface_ijk,free_surface_ijk,NDIM*NGLL2*mp->num_free_surface_faces);
+  }
 
   // alloc storage for the surface buffer to be copied
   gpuMalloc_realw((void**) &mp->d_noise_surface_movie,NDIM*NGLL2*mp->num_free_surface_faces);
@@ -2227,14 +2243,10 @@ TRACE("prepare_cleanup_device");
       gpuFree(mp->d_c66store);
     }
     if (mp->approximate_ocean_load){
-      if (mp->num_free_surface_faces > 0){
+      if (mp->npoin_oceans > 0){
         gpuFree(mp->d_rmass_ocean_load);
-        gpuFree(mp->d_free_surface_normal);
-        gpuFree(mp->d_updated_dof_ocean_load);
-        if (*NOISE_TOMOGRAPHY == 0){
-          gpuFree(mp->d_free_surface_ispec);
-          gpuFree(mp->d_free_surface_ijk);
-        }
+        gpuFree(mp->d_normal_ocean_load);
+        gpuFree(mp->d_ibool_ocean_load);
       }
     }
   } // ELASTIC_SIMULATION
@@ -2250,8 +2262,10 @@ TRACE("prepare_cleanup_device");
 
   // NOISE arrays
   if (*NOISE_TOMOGRAPHY > 0){
-    gpuFree(mp->d_free_surface_ispec);
-    gpuFree(mp->d_free_surface_ijk);
+    if (mp->num_free_surface_faces > 0){
+      gpuFree(mp->d_free_surface_ispec);
+      gpuFree(mp->d_free_surface_ijk);
+    }
     gpuFree(mp->d_noise_surface_movie);
     if (*NOISE_TOMOGRAPHY == 1) gpuFree(mp->d_noise_sourcearray);
     if (*NOISE_TOMOGRAPHY > 1){

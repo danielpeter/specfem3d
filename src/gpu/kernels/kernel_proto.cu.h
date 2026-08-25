@@ -204,13 +204,10 @@ __global__ void compute_coupling_elastic_ac_kernel(field* potential_dot_dot_acou
 
 __global__ void compute_coupling_ocean_cuda_kernel(realw* accel,
                                                    realw* rmassx,realw* rmassy,realw* rmassz,
+                                                   int npoin_oceans,
+                                                   int* ibool_ocean_load,
                                                    realw* rmass_ocean_load,
-                                                   int num_free_surface_faces,
-                                                   int* free_surface_ispec,
-                                                   int* free_surface_ijk,
-                                                   realw* free_surface_normal,
-                                                   int* d_ibool,
-                                                   int* updated_dof_ocean_load) ;
+                                                   realw* normal_ocean_load) ;
 
 
 //

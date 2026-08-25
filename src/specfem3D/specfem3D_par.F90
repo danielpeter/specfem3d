@@ -96,6 +96,12 @@ module specfem_par
   ! additional mass matrix for ocean load
   real(kind=CUSTOM_REAL), dimension(:), allocatable :: rmass_ocean_load
 
+  ! for approximate ocean load contribution
+  integer :: npoin_oceans
+  integer, dimension(:),allocatable :: ibool_ocean_load
+  real(kind=CUSTOM_REAL), dimension(:,:),allocatable :: normal_ocean_load
+  real(kind=CUSTOM_REAL), dimension(:),allocatable :: rmass_ocean_load_selected
+
   !-----------------------------------------------------------------
   ! time scheme
   !-----------------------------------------------------------------

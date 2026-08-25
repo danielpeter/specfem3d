@@ -100,6 +100,9 @@
   ! prepares coupling with injection boundary
   call couple_with_injection_prepare_boundary()
 
+  ! prepares oceans
+  call prepare_oceans()
+
   ! prepares GPU arrays
   if (GPU_MODE) call prepare_GPU()
 

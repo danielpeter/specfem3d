@@ -189,180 +189,251 @@
 !-------------------------------------------------------------------------------------------------
 !
 
-  subroutine compute_coupling_ocean(NSPEC_AB,NGLOB_AB, &
-                                    ibool,rmassx,rmassy,rmassz, &
-                                    rmass_ocean_load,accel, &
-                                    free_surface_normal,free_surface_ijk,free_surface_ispec, &
-                                    num_free_surface_faces)
+  subroutine compute_coupling_ocean(NGLOB_AB,accel,&
+                                    rmassx,rmassy,rmassz, &
+                                    npoin_oceans,ibool_ocean_load,rmass_ocean_load_selected,normal_ocean_load)
 
 ! updates acceleration with ocean load term:
 ! approximates ocean-bottom continuity of pressure & displacement for longer period waves (> ~20s ),
 ! assuming incompressible fluid column above bathymetry ocean bottom
+!
+! this routine loops over global `npoin_oceans` using corresponding ocean load arrays prepared in `prepare_oceans()`.
+! the ocean load contribution is added once on selected global nodes, using previously assembled values for normals and rmass.
+! this avoids looping over all free surface elements and calculating local contributions instead.
 
-  use constants
+  use constants,only: CUSTOM_REAL,NDIM
 
   implicit none
 
-  integer,intent(in) :: NSPEC_AB,NGLOB_AB
+  integer,intent(in) :: NGLOB_AB
 
   real(kind=CUSTOM_REAL),dimension(NDIM,NGLOB_AB),intent(inout) :: accel
   real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmassx,rmassy,rmassz
-  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmass_ocean_load
 
-  integer, dimension(NGLLX,NGLLY,NGLLZ,NSPEC_AB),intent(in) :: ibool
+  integer,intent(in) :: npoin_oceans
+  integer,dimension(npoin_oceans),intent(in) :: ibool_ocean_load
+  real(kind=CUSTOM_REAL),dimension(npoin_oceans),intent(in) :: rmass_ocean_load_selected
+  real(kind=CUSTOM_REAL),dimension(NDIM,npoin_oceans),intent(in) :: normal_ocean_load
 
-  ! free surface
-  integer,intent(in) :: num_free_surface_faces
-  real(kind=CUSTOM_REAL),intent(in) :: free_surface_normal(NDIM,NGLLSQUARE,num_free_surface_faces)
-  integer,intent(in) :: free_surface_ijk(3,NGLLSQUARE,num_free_surface_faces)
-  integer,intent(in) :: free_surface_ispec(num_free_surface_faces)
-
-! local parameters
-  real(kind=CUSTOM_REAL) :: nx,ny,nz
+  ! local parameters
+  real(kind=CUSTOM_REAL) :: nx,ny,nz,rmass
   real(kind=CUSTOM_REAL) :: force_normal_comp
-  integer :: i,j,k,ispec,iglob
-  integer :: igll,iface
-  logical,dimension(NGLOB_AB) :: updated_dof_ocean_load
+  integer :: ipoin,iglob
 
-  !   initialize the updates
-  updated_dof_ocean_load(:) = .false.
+  ! for surface nodes exactly at the free surface (ocean bottom)
+
+  ! checks if anything to do
+  if (npoin_oceans == 0) return
 
   ! for surface elements exactly at the top of the model (ocean bottom)
-  do iface = 1,num_free_surface_faces
+  do ipoin = 1,npoin_oceans
 
-    ispec = free_surface_ispec(iface)
-    do igll = 1, NGLLSQUARE
-      i = free_surface_ijk(1,igll,iface)
-      j = free_surface_ijk(2,igll,iface)
-      k = free_surface_ijk(3,igll,iface)
+    ! get global point number
+    iglob = ibool_ocean_load(ipoin)
 
-      ! get global point number
-      iglob = ibool(i,j,k,ispec)
+    ! get normal
+    nx = normal_ocean_load(1,ipoin)
+    ny = normal_ocean_load(2,ipoin)
+    nz = normal_ocean_load(3,ipoin)
 
-      ! only update once
-      if (.not. updated_dof_ocean_load(iglob)) then
+    ! make updated component of right-hand side
+    ! we divide by rmass() which is 1 / M
+    ! we use the total force which includes the Coriolis term above
+    force_normal_comp = accel(1,iglob)*nx / rmassx(iglob) &
+                      + accel(2,iglob)*ny / rmassy(iglob) &
+                      + accel(3,iglob)*nz / rmassz(iglob)
 
-        ! get normal
-        nx = free_surface_normal(1,igll,iface)
-        ny = free_surface_normal(2,igll,iface)
-        nz = free_surface_normal(3,igll,iface)
+    rmass = rmass_ocean_load_selected(ipoin)
 
-        ! make updated component of right-hand side
-        ! we divide by rmass() which is 1 / M
-        ! we use the total force which includes the Coriolis term above
-        force_normal_comp = accel(1,iglob)*nx / rmassx(iglob) &
-                            + accel(2,iglob)*ny / rmassy(iglob) &
-                            + accel(3,iglob)*nz / rmassz(iglob)
-
-        accel(1,iglob) = accel(1,iglob) &
-          + (rmass_ocean_load(iglob) - rmassx(iglob)) * force_normal_comp * nx
-        accel(2,iglob) = accel(2,iglob) &
-          + (rmass_ocean_load(iglob) - rmassy(iglob)) * force_normal_comp * ny
-        accel(3,iglob) = accel(3,iglob) &
-          + (rmass_ocean_load(iglob) - rmassz(iglob)) * force_normal_comp * nz
-
-        ! done with this point
-        updated_dof_ocean_load(iglob) = .true.
-
-      endif
-
-    enddo ! igll
-  enddo ! iface
+    accel(1,iglob) = accel(1,iglob) + (rmass - rmassx(iglob)) * force_normal_comp * nx
+    accel(2,iglob) = accel(2,iglob) + (rmass - rmassy(iglob)) * force_normal_comp * ny
+    accel(3,iglob) = accel(3,iglob) + (rmass - rmassz(iglob)) * force_normal_comp * nz
+  enddo
 
   end subroutine compute_coupling_ocean
+
 !
 !-------------------------------------------------------------------------------------------------
 !
 
-  subroutine compute_coupling_ocean_backward(NSPEC_AB,NGLOB_AB, &
-                                    ibool,rmassx,rmassy,rmassz,rmass_ocean_load, &
-                                    free_surface_normal,free_surface_ijk,free_surface_ispec, &
-                                    num_free_surface_faces,SIMULATION_TYPE, &
-                                    NGLOB_ADJOINT,b_accel)
-
-! updates acceleration with ocean load term:
-! approximates ocean-bottom continuity of pressure & displacement for longer period waves (> ~20s ),
-! assuming incompressible fluid column above bathymetry ocean bottom
-
-  use constants
-
-  implicit none
-
-  integer :: NSPEC_AB,NGLOB_AB
-
-  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmassx,rmassy,rmassz
-  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmass_ocean_load
-
-  integer, dimension(NGLLX,NGLLY,NGLLZ,NSPEC_AB),intent(in) :: ibool
-
-  ! free surface
-  integer :: num_free_surface_faces
-  real(kind=CUSTOM_REAL) :: free_surface_normal(NDIM,NGLLSQUARE,num_free_surface_faces)
-  integer :: free_surface_ijk(3,NGLLSQUARE,num_free_surface_faces)
-  integer :: free_surface_ispec(num_free_surface_faces)
-
-  ! adjoint simulations
-  integer :: SIMULATION_TYPE,NGLOB_ADJOINT
-  real(kind=CUSTOM_REAL),dimension(NDIM,NGLOB_ADJOINT):: b_accel
-
-! local parameters
-  real(kind=CUSTOM_REAL) :: nx,ny,nz
-  integer :: i,j,k,ispec,iglob
-  integer :: igll,iface
-  logical,dimension(NGLOB_AB) :: updated_dof_ocean_load
-  ! adjoint locals
-  real(kind=CUSTOM_REAL) :: b_force_normal_comp
-
-  ! checks if anything to do
-  if (SIMULATION_TYPE /= 3) return
-
-  !   initialize the updates
-  updated_dof_ocean_load(:) = .false.
-
-  ! for surface elements exactly at the top of the model (ocean bottom)
-  do iface = 1,num_free_surface_faces
-
-    ispec = free_surface_ispec(iface)
-    do igll = 1, NGLLSQUARE
-      i = free_surface_ijk(1,igll,iface)
-      j = free_surface_ijk(2,igll,iface)
-      k = free_surface_ijk(3,igll,iface)
-
-      ! get global point number
-      iglob = ibool(i,j,k,ispec)
-
-      ! only update once
-      if (.not. updated_dof_ocean_load(iglob)) then
-
-        ! get normal
-        nx = free_surface_normal(1,igll,iface)
-        ny = free_surface_normal(2,igll,iface)
-        nz = free_surface_normal(3,igll,iface)
-
-        ! make updated component of right-hand side
-        ! we divide by rmass() which is 1 / M
-        ! we use the total force which includes the Coriolis term above
-
-        ! adjoint simulations
-        b_force_normal_comp = b_accel(1,iglob)*nx / rmassx(iglob) &
-                              + b_accel(2,iglob)*ny / rmassy(iglob) &
-                              + b_accel(3,iglob)*nz / rmassz(iglob)
-
-        b_accel(1,iglob) = b_accel(1,iglob) &
-          + (rmass_ocean_load(iglob) - rmassx(iglob)) * b_force_normal_comp * nx
-        b_accel(2,iglob) = b_accel(2,iglob) &
-          + (rmass_ocean_load(iglob) - rmassy(iglob)) * b_force_normal_comp * ny
-        b_accel(3,iglob) = b_accel(3,iglob) &
-          + (rmass_ocean_load(iglob) - rmassz(iglob)) * b_force_normal_comp * nz
-
-        ! done with this point
-        updated_dof_ocean_load(iglob) = .true.
-
-      endif
-
-    enddo ! igll
-  enddo ! iface
-
-  end subroutine compute_coupling_ocean_backward
+! old routine, left here for reference...
+!
+!  subroutine compute_coupling_ocean(NSPEC_AB,NGLOB_AB, &
+!                                    ibool,rmassx,rmassy,rmassz, &
+!                                    rmass_ocean_load,accel, &
+!                                    free_surface_normal,free_surface_ijk,free_surface_ispec, &
+!                                    num_free_surface_faces)
+!
+!! updates acceleration with ocean load term:
+!! approximates ocean-bottom continuity of pressure & displacement for longer period waves (> ~20s ),
+!! assuming incompressible fluid column above bathymetry ocean bottom
+!
+!  use constants
+!
+!  implicit none
+!
+!  integer,intent(in) :: NSPEC_AB,NGLOB_AB
+!
+!  real(kind=CUSTOM_REAL),dimension(NDIM,NGLOB_AB),intent(inout) :: accel
+!  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmassx,rmassy,rmassz
+!  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmass_ocean_load
+!
+!  integer, dimension(NGLLX,NGLLY,NGLLZ,NSPEC_AB),intent(in) :: ibool
+!
+!  ! free surface
+!  integer,intent(in) :: num_free_surface_faces
+!  real(kind=CUSTOM_REAL),intent(in) :: free_surface_normal(NDIM,NGLLSQUARE,num_free_surface_faces)
+!  integer,intent(in) :: free_surface_ijk(3,NGLLSQUARE,num_free_surface_faces)
+!  integer,intent(in) :: free_surface_ispec(num_free_surface_faces)
+!
+!! local parameters
+!  real(kind=CUSTOM_REAL) :: nx,ny,nz
+!  real(kind=CUSTOM_REAL) :: force_normal_comp
+!  integer :: i,j,k,ispec,iglob
+!  integer :: igll,iface
+!  logical,dimension(NGLOB_AB) :: updated_dof_ocean_load
+!
+!  !   initialize the updates
+!  updated_dof_ocean_load(:) = .false.
+!
+!  ! for surface elements exactly at the top of the model (ocean bottom)
+!  do iface = 1,num_free_surface_faces
+!
+!    ispec = free_surface_ispec(iface)
+!    do igll = 1, NGLLSQUARE
+!      i = free_surface_ijk(1,igll,iface)
+!      j = free_surface_ijk(2,igll,iface)
+!      k = free_surface_ijk(3,igll,iface)
+!
+!      ! get global point number
+!      iglob = ibool(i,j,k,ispec)
+!
+!      ! only update once
+!      if (.not. updated_dof_ocean_load(iglob)) then
+!
+!        ! get normal
+!        nx = free_surface_normal(1,igll,iface)
+!        ny = free_surface_normal(2,igll,iface)
+!        nz = free_surface_normal(3,igll,iface)
+!
+!        ! make updated component of right-hand side
+!        ! we divide by rmass() which is 1 / M
+!        ! we use the total force which includes the Coriolis term above
+!        force_normal_comp = accel(1,iglob)*nx / rmassx(iglob) &
+!                            + accel(2,iglob)*ny / rmassy(iglob) &
+!                            + accel(3,iglob)*nz / rmassz(iglob)
+!
+!        accel(1,iglob) = accel(1,iglob) &
+!          + (rmass_ocean_load(iglob) - rmassx(iglob)) * force_normal_comp * nx
+!        accel(2,iglob) = accel(2,iglob) &
+!          + (rmass_ocean_load(iglob) - rmassy(iglob)) * force_normal_comp * ny
+!        accel(3,iglob) = accel(3,iglob) &
+!          + (rmass_ocean_load(iglob) - rmassz(iglob)) * force_normal_comp * nz
+!
+!        ! done with this point
+!        updated_dof_ocean_load(iglob) = .true.
+!
+!      endif
+!
+!    enddo ! igll
+!  enddo ! iface
+!
+!  end subroutine compute_coupling_ocean
 
 
+!
+!-------------------------------------------------------------------------------------------------
+!
+
+! old routine, left here for reference...
+!
+!  subroutine compute_coupling_ocean_backward(NSPEC_AB,NGLOB_AB, &
+!                                    ibool,rmassx,rmassy,rmassz,rmass_ocean_load, &
+!                                    free_surface_normal,free_surface_ijk,free_surface_ispec, &
+!                                    num_free_surface_faces,SIMULATION_TYPE, &
+!                                    NGLOB_ADJOINT,b_accel)
+!
+!! updates acceleration with ocean load term:
+!! approximates ocean-bottom continuity of pressure & displacement for longer period waves (> ~20s ),
+!! assuming incompressible fluid column above bathymetry ocean bottom
+!
+!  use constants
+!
+!  implicit none
+!
+!  integer :: NSPEC_AB,NGLOB_AB
+!
+!  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmassx,rmassy,rmassz
+!  real(kind=CUSTOM_REAL),dimension(NGLOB_AB),intent(in) :: rmass_ocean_load
+!
+!  integer, dimension(NGLLX,NGLLY,NGLLZ,NSPEC_AB),intent(in) :: ibool
+!
+!  ! free surface
+!  integer :: num_free_surface_faces
+!  real(kind=CUSTOM_REAL) :: free_surface_normal(NDIM,NGLLSQUARE,num_free_surface_faces)
+!  integer :: free_surface_ijk(3,NGLLSQUARE,num_free_surface_faces)
+!  integer :: free_surface_ispec(num_free_surface_faces)
+!
+!  ! adjoint simulations
+!  integer :: SIMULATION_TYPE,NGLOB_ADJOINT
+!  real(kind=CUSTOM_REAL),dimension(NDIM,NGLOB_ADJOINT):: b_accel
+!
+!! local parameters
+!  real(kind=CUSTOM_REAL) :: nx,ny,nz
+!  integer :: i,j,k,ispec,iglob
+!  integer :: igll,iface
+!  logical,dimension(NGLOB_AB) :: updated_dof_ocean_load
+!  ! adjoint locals
+!  real(kind=CUSTOM_REAL) :: b_force_normal_comp
+!
+!  ! checks if anything to do
+!  if (SIMULATION_TYPE /= 3) return
+!
+!  !   initialize the updates
+!  updated_dof_ocean_load(:) = .false.
+!
+!  ! for surface elements exactly at the top of the model (ocean bottom)
+!  do iface = 1,num_free_surface_faces
+!
+!    ispec = free_surface_ispec(iface)
+!    do igll = 1, NGLLSQUARE
+!      i = free_surface_ijk(1,igll,iface)
+!      j = free_surface_ijk(2,igll,iface)
+!      k = free_surface_ijk(3,igll,iface)
+!
+!      ! get global point number
+!      iglob = ibool(i,j,k,ispec)
+!
+!      ! only update once
+!      if (.not. updated_dof_ocean_load(iglob)) then
+!
+!        ! get normal
+!        nx = free_surface_normal(1,igll,iface)
+!        ny = free_surface_normal(2,igll,iface)
+!        nz = free_surface_normal(3,igll,iface)
+!
+!        ! make updated component of right-hand side
+!        ! we divide by rmass() which is 1 / M
+!        ! we use the total force which includes the Coriolis term above
+!
+!        ! adjoint simulations
+!        b_force_normal_comp = b_accel(1,iglob)*nx / rmassx(iglob) &
+!                              + b_accel(2,iglob)*ny / rmassy(iglob) &
+!                              + b_accel(3,iglob)*nz / rmassz(iglob)
+!
+!        b_accel(1,iglob) = b_accel(1,iglob) &
+!          + (rmass_ocean_load(iglob) - rmassx(iglob)) * b_force_normal_comp * nx
+!        b_accel(2,iglob) = b_accel(2,iglob) &
+!          + (rmass_ocean_load(iglob) - rmassy(iglob)) * b_force_normal_comp * ny
+!        b_accel(3,iglob) = b_accel(3,iglob) &
+!          + (rmass_ocean_load(iglob) - rmassz(iglob)) * b_force_normal_comp * nz
+!
+!        ! done with this point
+!        updated_dof_ocean_load(iglob) = .true.
+!
+!      endif
+!
+!    enddo ! igll
+!  enddo ! iface
+!
+!  end subroutine compute_coupling_ocean_backward

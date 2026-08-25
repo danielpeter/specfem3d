@@ -705,9 +705,13 @@ typedef struct mesh_ {
   realw* d_hess_el_kl, *d_hess_rho_el_kl, *d_hess_mu_el_kl, *d_hess_kappa_el_kl;
 
   // oceans
+  int npoin_oceans;
+  int* d_ibool_ocean_load;
   realw* d_rmass_ocean_load;
-  realw* d_free_surface_normal;
-  int* d_updated_dof_ocean_load;
+  realw* d_normal_ocean_load;
+  // deprecated
+  //realw* d_free_surface_normal;
+  //int* d_updated_dof_ocean_load;
 
   // C-PML
   int NSPEC_CPML;

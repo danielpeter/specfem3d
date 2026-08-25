@@ -257,14 +257,16 @@ void FC_FUNC_(compute_coupling_ocean_cuda,
     exit_on_error("Error invalid FORWARD_OR_ADJOINT in compute_coupling_ocean_cuda() routine");
   }
 
-  // checks if anything to do
-  if (mp->num_free_surface_faces == 0) return;
+  int size = mp->npoin_oceans;
 
-  // block sizes: exact blocksize to match NGLLSQUARE
-  int blocksize = NGLL2;
+  // checks if anything to do
+  if (size <= 0) return;
+
+  int blocksize = BLOCKSIZE_KERNEL3;
+  int size_padded = ((int)ceil(((double)size)/((double)blocksize)))*blocksize;
 
   int num_blocks_x, num_blocks_y;
-  get_blocks_xy(mp->num_free_surface_faces,&num_blocks_x,&num_blocks_y);
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
   dim3 grid(num_blocks_x,num_blocks_y);
   dim3 threads(blocksize,1,1);
@@ -278,22 +280,14 @@ void FC_FUNC_(compute_coupling_ocean_cuda,
     accel = mp->d_b_accel;
   }
 
-  // initializes temporary array to zero
-  gpuMemset_int(mp->d_updated_dof_ocean_load,mp->NGLOB_AB,0);
-
-  GPU_ERROR_CHECKING("before kernel compute_coupling_ocean_cuda");
-
 #ifdef USE_CUDA
   if (run_cuda){
-  compute_coupling_ocean_cuda_kernel<<<grid,threads,0,mp->compute_stream>>>(accel,
-                                                                            mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,
-                                                                            mp->d_rmass_ocean_load,
-                                                                            mp->num_free_surface_faces,
-                                                                            mp->d_free_surface_ispec,
-                                                                            mp->d_free_surface_ijk,
-                                                                            mp->d_free_surface_normal,
-                                                                            mp->d_ibool,
-                                                                            mp->d_updated_dof_ocean_load);
+    compute_coupling_ocean_cuda_kernel<<<grid,threads,0,mp->compute_stream>>>(accel,
+                                                                              mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,
+                                                                              mp->npoin_oceans,
+                                                                              mp->d_ibool_ocean_load,
+                                                                              mp->d_rmass_ocean_load,
+                                                                              mp->d_normal_ocean_load);
   }
 #endif
 #ifdef USE_HIP
@@ -301,13 +295,10 @@ void FC_FUNC_(compute_coupling_ocean_cuda,
     hipLaunchKernelGGL(compute_coupling_ocean_cuda_kernel, dim3(grid), dim3(threads), 0, mp->compute_stream,
                                                            accel,
                                                            mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,
+                                                           mp->npoin_oceans,
+                                                           mp->d_ibool_ocean_load,
                                                            mp->d_rmass_ocean_load,
-                                                           mp->num_free_surface_faces,
-                                                           mp->d_free_surface_ispec,
-                                                           mp->d_free_surface_ijk,
-                                                           mp->d_free_surface_normal,
-                                                           mp->d_ibool,
-                                                           mp->d_updated_dof_ocean_load);
+                                                           mp->d_normal_ocean_load);
   }
 #endif
 

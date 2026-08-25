@@ -108,6 +108,7 @@
                                 two_omega_rotation, &
                                 b_two_omega_rotation)
 
+  call synchronize_all()
 
   ! prepares fields on GPU for acoustic simulations
   if (ACOUSTIC_SIMULATION) then
@@ -116,6 +117,7 @@
       write(IMAIN,*) "  loading acoustic arrays"
       call flush_IMAIN()
     endif
+    call synchronize_all()
 
     call prepare_fields_acoustic_device(Mesh_pointer, &
                                         rmass_acoustic,rhostore,kappastore, &
@@ -132,6 +134,7 @@
     if (SIMULATION_TYPE == 3) &
       call prepare_fields_acoustic_adj_dev(Mesh_pointer,APPROXIMATE_HESS_KL)
 
+    call synchronize_all()
   endif
 
   ! prepares fields on GPU for elastic simulations
@@ -141,6 +144,7 @@
       write(IMAIN,*) "  loading elastic arrays"
       call flush_IMAIN()
     endif
+    call synchronize_all()
 
     call prepare_fields_elastic_device(Mesh_pointer, &
                                        rmassx,rmassy,rmassz, &
@@ -158,10 +162,8 @@
                                        R_trace,epsilondev_trace, &
                                        factor_common_kappa, &
                                        alphaval,betaval,gammaval, &
-                                       APPROXIMATE_OCEAN_LOAD,rmass_ocean_load, &
+                                       APPROXIMATE_OCEAN_LOAD, &
                                        NOISE_TOMOGRAPHY, &
-                                       free_surface_normal,free_surface_ispec,free_surface_ijk, &
-                                       num_free_surface_faces, &
                                        ACOUSTIC_SIMULATION, &
                                        num_colors_outer_elastic,num_colors_inner_elastic, &
                                        num_elem_colors_elastic, &
@@ -185,6 +187,22 @@
                                           ANISOTROPIC_KL, &
                                           APPROXIMATE_HESS_KL)
 
+    call synchronize_all()
+
+    ! prepares oceans arrays
+    if (APPROXIMATE_OCEAN_LOAD) then
+      if (myrank == 0) then
+        write(IMAIN,*) "  loading oceans arrays"
+        call flush_IMAIN()
+      endif
+      call synchronize_all()
+
+      call prepare_oceans_device(Mesh_pointer,npoin_oceans, &
+                                 ibool_ocean_load, &
+                                 rmass_ocean_load_selected, &
+                                 normal_ocean_load)
+      call synchronize_all()
+    endif
 
     ! PML
     if (PML_CONDITIONS) then
@@ -201,6 +219,8 @@
                                       pml_convolution_coef_alpha,pml_convolution_coef_beta, &
                                       pml_convolution_coef_abar,pml_convolution_coef_strain, &
                                       wgll_cube,rhostore,CPML_THETA)
+
+      call synchronize_all()
     endif
   endif
 
@@ -216,9 +236,12 @@
       write(IMAIN,*) "  loading adjoint receiver arrays"
       call flush_IMAIN()
     endif
+    call synchronize_all()
+
     call prepare_sim2_or_3_const_device(Mesh_pointer,nadj_rec_local,NTSTEP_BETWEEN_READ_ADJSRC, &
                                         hxir_adjstore,hetar_adjstore,hgammar_adjstore, &
                                         nrec,islice_selected_rec,ispec_selected_rec)
+    call synchronize_all()
   endif
 
   ! prepares fields on GPU for noise simulations
@@ -229,6 +252,8 @@
       write(IMAIN,*) "  loading noise arrays"
       call flush_IMAIN()
     endif
+    call synchronize_all()
+
     ! copies noise  arrays to GPU
     call prepare_fields_noise_device(Mesh_pointer, &
                                      free_surface_ispec, &
@@ -239,6 +264,7 @@
                                      normal_x_noise,normal_y_noise,normal_z_noise, &
                                      mask_noise,free_surface_jacobian2Dw)
 
+    call synchronize_all()
   endif ! NOISE_TOMOGRAPHY
 
   ! prepares gravity arrays
@@ -248,9 +274,12 @@
       write(IMAIN,*) "  loading gravity"
       call flush_IMAIN()
     endif
+    call synchronize_all()
+
     call prepare_fields_gravity_device(Mesh_pointer,GRAVITY, &
                                        minus_deriv_gravity,minus_g, &
                                        wgll_cube,rhostore)
+    call synchronize_all()
   endif
 
   ! prepares fault rupture simulation
@@ -260,6 +289,7 @@
       write(IMAIN,*) "  loading fault simulation"
       call flush_IMAIN()
     endif
+    call synchronize_all()
 
     ! dynamic rupture
     if (SIMULATION_TYPE_DYN) then
@@ -268,6 +298,8 @@
         write(IMAIN,*) "    dynamic rupture arrays"
         call flush_IMAIN()
       endif
+      call synchronize_all()
+
       ! initializes fault data on gpu
       call fault_transfer_data_GPU()
 
@@ -278,6 +310,8 @@
 
       ! sets up friction law arrays
       call fault_rsf_swf_init_GPU()
+
+      call synchronize_all()
     endif
 
     ! kinematic rupture
@@ -293,7 +327,10 @@
       write(IMAIN,*) "  loading wavefield discontinuity"
       call flush_IMAIN()
     endif
+    call synchronize_all()
+
     call prepare_wavefield_discontinuity_GPU()
+    call synchronize_all()
   endif
 
   ! LTS preparation for GPU
@@ -533,10 +570,10 @@
       memory_size = memory_size + 21.d0 * NGLL3_PADDED * NSPEC_AB * dble(CUSTOM_REAL)
     endif
     if (APPROXIMATE_OCEAN_LOAD) then
-      ! d_rmass_ocean_load
-      memory_size = memory_size + NGLOB_AB * dble(CUSTOM_REAL)
-      ! d_free_surface_normal
-      memory_size = memory_size + 3.d0 * NGLL2 * num_free_surface_faces * dble(CUSTOM_REAL)
+      ! d_ibool_ocean_load
+      memory_size = memory_size + npoin_oceans * dble(SIZE_INTEGER)
+      ! d_rmass_ocean_load,..
+      memory_size = memory_size + 4.d0 * npoin_oceans * dble(CUSTOM_REAL)
     endif
   endif
 

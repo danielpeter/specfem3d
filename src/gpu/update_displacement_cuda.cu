@@ -158,12 +158,12 @@ void FC_FUNC_(update_displacement_cuda,
 #ifdef USE_HIP
       if (run_hip){
         hipLaunchKernelGGL(UpdateDispVeloc_PML_kernel, dim3(grid2), dim3(threads2), 0, mp->compute_stream,
-                                                                          displ,veloc,accel,
-                                                                          mp->d_PML_displ_new,
-                                                                          mp->NSPEC_CPML,mp->d_CPML_to_spec,
-                                                                          mp->d_ibool,
-                                                                          deltatsqover2,deltatover2,
-                                                                          mp->pml_theta);
+                                                                    displ,veloc,accel,
+                                                                    mp->d_PML_displ_new,
+                                                                    mp->NSPEC_CPML,mp->d_CPML_to_spec,
+                                                                    mp->d_ibool,
+                                                                    deltatsqover2,deltatover2,
+                                                                    mp->pml_theta);
       }
 #endif
 
@@ -331,14 +331,14 @@ void FC_FUNC_(kernel_3_a_cuda,
 
   // check whether we can update accel and veloc, or only accel at this point
   if (*APPROXIMATE_OCEAN_LOAD == 0){
-   // updates both, accel and veloc
+    // updates both, accel and veloc
 #ifdef USE_CUDA
-   if (run_cuda){
-     kernel_3_cuda_device<<<grid,threads,0,mp->compute_stream>>>(veloc,
-                                                                   accel,
-                                                                   size,
-                                                                   deltatover2,
-                                                                   mp->d_rmassx,mp->d_rmassy,mp->d_rmassz);
+    if (run_cuda){
+      kernel_3_cuda_device<<<grid,threads,0,mp->compute_stream>>>(veloc,
+                                                                  accel,
+                                                                  size,
+                                                                  deltatover2,
+                                                                  mp->d_rmassx,mp->d_rmassy,mp->d_rmassz);
     }
 #endif
 #ifdef USE_HIP
@@ -352,15 +352,15 @@ void FC_FUNC_(kernel_3_a_cuda,
     }
 #endif
 
-  }else{
-   // updates only accel
-   #ifdef USE_CUDA
-   if (run_cuda){
-     kernel_3_accel_cuda_device<<<grid,threads,0,mp->compute_stream>>>(accel,
-                                                                         size,
-                                                                         mp->d_rmassx,
-                                                                         mp->d_rmassy,
-                                                                         mp->d_rmassz);
+  } else {
+    // updates only accel
+#ifdef USE_CUDA
+    if (run_cuda){
+      kernel_3_accel_cuda_device<<<grid,threads,0,mp->compute_stream>>>(accel,
+                                                                        size,
+                                                                        mp->d_rmassx,
+                                                                        mp->d_rmassy,
+                                                                        mp->d_rmassz);
     }
 #endif
 #ifdef USE_HIP
@@ -377,7 +377,7 @@ void FC_FUNC_(kernel_3_a_cuda,
   }
 
   //printf("checking updatedispl_kernel launch...with %dx%d blocks\n",num_blocks_x,num_blocks_y);
-  GPU_ERROR_CHECKING("after kernel 3 a");
+  GPU_ERROR_CHECKING("kernel_3_a_cuda");
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -421,8 +421,8 @@ void FC_FUNC_(kernel_3_b_cuda,
 #ifdef USE_CUDA
   if (run_cuda){
     kernel_3_veloc_cuda_device<<<grid,threads,0,mp->compute_stream>>>(veloc,
-                                                                        accel,
-                                                                        size,deltatover2);
+                                                                      accel,
+                                                                      size,deltatover2);
   }
 #endif
 #ifdef USE_HIP
@@ -435,7 +435,7 @@ void FC_FUNC_(kernel_3_b_cuda,
 #endif
 
   //printf("checking updatedispl_kernel launch...with %dx%d blocks\n",num_blocks_x,num_blocks_y);
-  GPU_ERROR_CHECKING("after kernel 3 b");
+  GPU_ERROR_CHECKING("kernel_3_b_cuda");
 }
 
 
@@ -497,14 +497,14 @@ void FC_FUNC_(kernel_3_acoustic_cuda,
 #ifdef USE_CUDA
     if (run_cuda){
       kernel_3_acoustic_cuda_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_potential_dot_acoustic,
-                                                        mp->d_potential_dot_dot_acoustic,
-                                                        mp->d_b_potential_dot_acoustic,
-                                                        mp->d_b_potential_dot_dot_acoustic,
-                                                        mp->simulation_type,
-                                                        size,
-                                                        deltaover2,
-                                                        b_deltaover2,
-                                                        mp->d_rmass_acoustic);
+                                                                           mp->d_potential_dot_dot_acoustic,
+                                                                           mp->d_b_potential_dot_acoustic,
+                                                                           mp->d_b_potential_dot_dot_acoustic,
+                                                                           mp->simulation_type,
+                                                                           size,
+                                                                           deltaover2,
+                                                                           b_deltaover2,
+                                                                           mp->d_rmass_acoustic);
     }
 #endif
 #ifdef USE_HIP
@@ -522,15 +522,15 @@ void FC_FUNC_(kernel_3_acoustic_cuda,
     }
 #endif
 
-  }else{
+  } else {
     // single field kernel
 #ifdef USE_CUDA
     if (run_cuda){
       kernel_3_acoustic_single_cuda_device<<<grid,threads,0,mp->compute_stream>>>(potential_dot,
-                                                               potential_dot_dot,
-                                                               size,
-                                                               deltaover2,
-                                                               mp->d_rmass_acoustic);
+                                                                                  potential_dot_dot,
+                                                                                  size,
+                                                                                  deltaover2,
+                                                                                  mp->d_rmass_acoustic);
     }
 #endif
 #ifdef USE_HIP
@@ -546,6 +546,6 @@ void FC_FUNC_(kernel_3_acoustic_cuda,
   }
 
   //printf("checking updatedispl_kernel launch...with %dx%d blocks\n",num_blocks_x,num_blocks_y);
-  GPU_ERROR_CHECKING("after kernel 3 ");
+  GPU_ERROR_CHECKING("kernel_3_acoustic_cuda");
 }
 
