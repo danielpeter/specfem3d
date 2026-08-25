@@ -629,6 +629,9 @@ void FC_FUNC_(initialize_gpu_device,
     do_init = 0;
     do_output = 1;
   }
+#else
+  // to avoid compiler warning
+  if (init_type == 1) {};
 #endif // WITH_CUDA_AWARE_MPI
 
   // initializes gpu cards
@@ -853,6 +856,9 @@ Please check MPI installation.\n";
       fclose(fp);
     }
   }
+#else
+  // to avoid compiler warning
+  if (myrank == 0) {};
 #endif // WITH_CUDA_AWARE_MPI
 
   // return value
