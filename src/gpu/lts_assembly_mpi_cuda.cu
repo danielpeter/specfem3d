@@ -49,17 +49,19 @@ void FC_FUNC_(sync_copy_reduced_from_device,
   // Wait until async-memcpy of outer elements is finished and start MPI.
   if (*iphase != 2){ exit_on_error("sync_copy_reduced_from_device must be called for iphase == 2"); }
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // checks if anything to do
+  if (mp->size_mpi_buffer <= 0) return;
 
-    // waits for asynchronous copy to finish
-    gpuStreamSynchronize(mp->copy_stream);
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    // There have been problems using the pinned-memory with MPI, so
-    // we copy the buffer into a non-pinned region.
-    memcpy(send_buffer, mp->h_send_accel_buffer, NDIM * num_interface_p_refine_boundary * sizeof(realw));
-  }
+  // waits for asynchronous copy to finish
+  gpuStreamSynchronize(mp->copy_stream);
+
+  // There have been problems using the pinned-memory with MPI, so
+  // we copy the buffer into a non-pinned region.
+  memcpy(send_buffer, mp->h_send_accel_buffer, NDIM * num_interface_p_refine_boundary * sizeof(realw));
+
   // memory copy is now finished, so non-blocking MPI send can proceed
 }
 
@@ -81,53 +83,54 @@ void FC_FUNC_(test_boundary_transfer_lts,
   int ilevel = *ilevel_f;
   int max_num_interface_p_refine_ibool = *max_num_interface_p_refine_ibool_f;
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // checks if anything to do
+  if (mp->size_mpi_buffer <= 0) return;
 
-    int blocksize = BLOCKSIZE_TRANSFER;
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    int size_padded = ((int)ceil(((double)max_num_interface_p_refine_ibool)/((double)blocksize)))*blocksize;
+  int blocksize = BLOCKSIZE_TRANSFER;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int size_padded = ((int)ceil(((double)max_num_interface_p_refine_ibool)/((double)blocksize)))*blocksize;
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
-    gpuMemset_realw(mp->d_send_accel_buffer, NDIM * mp->max_nibool_interfaces_ext_mesh * mp->num_interfaces_ext_mesh, 0);
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
+
+  gpuMemset_realw(mp->d_send_accel_buffer, NDIM * mp->max_nibool_interfaces_ext_mesh * mp->num_interfaces_ext_mesh, 0);
 
 #ifdef USE_CUDA
-    if (run_cuda){
-      prepare_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
-                                                                                  mp->d_send_accel_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->d_lts_num_interface_p_refine_ibool,
-                                                                                  mp->d_lts_interface_p_refine_ibool,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  ilevel);
-    }
+  if (run_cuda){
+    prepare_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
+                                                                                mp->d_send_accel_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->d_lts_num_interface_p_refine_ibool,
+                                                                                mp->d_lts_interface_p_refine_ibool,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                ilevel);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      hipLaunchKernelGGL(prepare_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                  mp->d_accel,
-                                                                                  mp->d_send_accel_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->d_lts_num_interface_p_refine_ibool,
-                                                                                  mp->d_lts_interface_p_refine_ibool,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  ilevel);
-    }
-#endif
-    GPU_ERROR_CHECKING("prepare_boundary_lts_accel_on_device");
-
-    // wait until kernel is finished before starting async memcpy
-    gpuSynchronize();
-
-    // this vector is bigger than necessary, however building it to fit properly is quite difficult
-    gpuMemcpy_tohost_realw(copy_buffer, mp->d_send_accel_buffer, NDIM * mp->max_nibool_interfaces_ext_mesh * mp->num_interfaces_ext_mesh);
+  if (run_hip){
+    hipLaunchKernelGGL(prepare_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                mp->d_accel,
+                                                                                mp->d_send_accel_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->d_lts_num_interface_p_refine_ibool,
+                                                                                mp->d_lts_interface_p_refine_ibool,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                ilevel);
   }
+#endif
+  GPU_ERROR_CHECKING("prepare_boundary_lts_accel_on_device");
+
+  // wait until kernel is finished before starting async memcpy
+  gpuSynchronize();
+
+  // this vector is bigger than necessary, however building it to fit properly is quite difficult
+  gpuMemcpy_tohost_realw(copy_buffer, mp->d_send_accel_buffer, NDIM * mp->max_nibool_interfaces_ext_mesh * mp->num_interfaces_ext_mesh);
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -148,50 +151,49 @@ void FC_FUNC_(transfer_reduced_boundary_from_device_async_lts,
 
   // checks if anything to do
   if (num_interface_p_refine_boundary == 0) return;
+  if (mp->size_mpi_buffer <= 0) return;
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    int blocksize = BLOCKSIZE_TRANSFER;
+  int blocksize = BLOCKSIZE_TRANSFER;
 
-    int size_padded = ((int)ceil(((double)num_interface_p_refine_boundary)/((double)blocksize)))*blocksize;
+  int size_padded = ((int)ceil(((double)num_interface_p_refine_boundary)/((double)blocksize)))*blocksize;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
 #ifdef USE_CUDA
-    if (run_cuda){
-      prepare_reduced_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
-                                                                                          mp->d_send_accel_buffer,
-                                                                                          num_interface_p_refine_boundary,
-                                                                                          mp->d_lts_interface_p_refine_boundary,
-                                                                                          mp->lts_max_nibool_interfaces_boundary,
-                                                                                          ilevel);
-    }
+  if (run_cuda){
+    prepare_reduced_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
+                                                                                        mp->d_send_accel_buffer,
+                                                                                        num_interface_p_refine_boundary,
+                                                                                        mp->d_lts_interface_p_refine_boundary,
+                                                                                        mp->lts_max_nibool_interfaces_boundary,
+                                                                                        ilevel);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      hipLaunchKernelGGL(prepare_reduced_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                          mp->d_accel,
-                                                                                          mp->d_send_accel_buffer,
-                                                                                          num_interface_p_refine_boundary,
-                                                                                          mp->d_lts_interface_p_refine_boundary,
-                                                                                          mp->lts_max_nibool_interfaces_boundary,
-                                                                                          ilevel);
-    }
+  if (run_hip){
+    hipLaunchKernelGGL(prepare_reduced_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                        mp->d_accel,
+                                                                                        mp->d_send_accel_buffer,
+                                                                                        num_interface_p_refine_boundary,
+                                                                                        mp->d_lts_interface_p_refine_boundary,
+                                                                                        mp->lts_max_nibool_interfaces_boundary,
+                                                                                        ilevel);
+  }
 #endif
 
-    // wait until kernel is finished before starting async memcpy
-    gpuSynchronize();
+  // wait until kernel is finished before starting async memcpy
+  gpuSynchronize();
 
-    // this vector is only as big as mpi-boundary for current p-level
-    gpuMemcpyAsync_tohost_realw(mp->h_send_accel_buffer, mp->d_send_accel_buffer,
-                                NDIM * num_interface_p_refine_boundary, mp->copy_stream);
-  }
+  // this vector is only as big as mpi-boundary for current p-level
+  gpuMemcpyAsync_tohost_realw(mp->h_send_accel_buffer, mp->d_send_accel_buffer,
+                              NDIM * num_interface_p_refine_boundary, mp->copy_stream);
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -210,51 +212,52 @@ void FC_FUNC_(transfer_boundary_from_device_async_lts,
   int ilevel = *ilevel_f;
   int max_num_interface_p_refine_ibool = *max_num_interface_p_refine_ibool_f;
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // checks if anything to do
+  if (mp->size_mpi_buffer <= 0) return;
 
-    int blocksize = BLOCKSIZE_TRANSFER;
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    int size_padded = ((int)ceil(((double)max_num_interface_p_refine_ibool)/((double)blocksize)))*blocksize;
+  int blocksize = BLOCKSIZE_TRANSFER;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int size_padded = ((int)ceil(((double)max_num_interface_p_refine_ibool)/((double)blocksize)))*blocksize;
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
 #ifdef USE_CUDA
-    if (run_cuda){
-      prepare_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
-                                                                                  mp->d_send_accel_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->d_lts_num_interface_p_refine_ibool,
-                                                                                  mp->d_lts_interface_p_refine_ibool,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  ilevel);
-    }
+  if (run_cuda){
+    prepare_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
+                                                                                mp->d_send_accel_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->d_lts_num_interface_p_refine_ibool,
+                                                                                mp->d_lts_interface_p_refine_ibool,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                ilevel);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      hipLaunchKernelGGL(prepare_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                  mp->d_accel,
-                                                                                  mp->d_send_accel_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->d_lts_num_interface_p_refine_ibool,
-                                                                                  mp->d_lts_interface_p_refine_ibool,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  ilevel);
-    }
+  if (run_hip){
+    hipLaunchKernelGGL(prepare_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                mp->d_accel,
+                                                                                mp->d_send_accel_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->d_lts_num_interface_p_refine_ibool,
+                                                                                mp->d_lts_interface_p_refine_ibool,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                ilevel);
+  }
 #endif
 
-    // wait until kernel is finished before starting async memcpy
-    gpuSynchronize();
+  // wait until kernel is finished before starting async memcpy
+  gpuSynchronize();
 
-    // this vector is bigger than necessary, however building it to fit properly is quite difficult
-    gpuMemcpyAsync_tohost_realw(mp->h_send_accel_buffer, mp->d_send_accel_buffer,
-                                NDIM * mp->max_nibool_interfaces_ext_mesh * mp->num_interfaces_ext_mesh, mp->copy_stream);
-  }
+  // this vector is bigger than necessary, however building it to fit properly is quite difficult
+  gpuMemcpyAsync_tohost_realw(mp->h_send_accel_buffer, mp->d_send_accel_buffer,
+                              NDIM * mp->max_nibool_interfaces_ext_mesh * mp->num_interfaces_ext_mesh, mp->copy_stream);
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -274,17 +277,16 @@ void FC_FUNC_(transfer_reduced_boundary_to_device_async_lts,
 
   // checks if anything to do
   if (num_interface_p_refine_boundary == 0) return;
+  if (mp->size_mpi_buffer <= 0) return;
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    // copy on host memory
-    memcpy(mp->h_recv_accel_buffer,buffer_reduced_recv_vector,3*num_interface_p_refine_boundary*sizeof(realw));
+  // copy on host memory
+  memcpy(mp->h_recv_accel_buffer,buffer_reduced_recv_vector,3*num_interface_p_refine_boundary*sizeof(realw));
 
-    // asynchronous copy to GPU using copy_stream
-    gpuMemcpyAsync_todevice_realw(mp->d_send_accel_buffer, mp->h_recv_accel_buffer, NDIM * num_interface_p_refine_boundary, mp->copy_stream);
-  }
+  // asynchronous copy to GPU using copy_stream
+  gpuMemcpyAsync_todevice_realw(mp->d_send_accel_buffer, mp->h_recv_accel_buffer, NDIM * num_interface_p_refine_boundary, mp->copy_stream);
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -305,51 +307,52 @@ void FC_FUNC_(assemble_mpi_device_lts,
   int ilevel = *ilevel_f;
   int max_num_interface_p_refine_ibool = *max_num_interface_p_refine_ibool_f;
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // checks if anything to do
+  if (mp->size_mpi_buffer <= 0) return;
 
-    // wait for copy to finish
-    gpuStreamSynchronize(mp->copy_stream);
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    int blocksize = BLOCKSIZE_TRANSFER;
+  // wait for copy to finish
+  gpuStreamSynchronize(mp->copy_stream);
 
-    int size_padded = ((int)ceil(((double)max_num_interface_p_refine_ibool)/((double)blocksize)))*blocksize;
+  int blocksize = BLOCKSIZE_TRANSFER;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int size_padded = ((int)ceil(((double)max_num_interface_p_refine_ibool)/((double)blocksize)))*blocksize;
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
 #ifdef USE_CUDA
-    if (run_cuda){
-      assemble_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
-                                                                                   mp->d_send_accel_buffer,
-                                                                                   mp->num_interfaces_ext_mesh,
-                                                                                   mp->d_lts_num_interface_p_refine_ibool,
-                                                                                   mp->d_lts_interface_p_refine_ibool,
-                                                                                   mp->max_nibool_interfaces_ext_mesh,
-                                                                                   ilevel);
-    }
+  if (run_cuda){
+    assemble_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
+                                                                                 mp->d_send_accel_buffer,
+                                                                                 mp->num_interfaces_ext_mesh,
+                                                                                 mp->d_lts_num_interface_p_refine_ibool,
+                                                                                 mp->d_lts_interface_p_refine_ibool,
+                                                                                 mp->max_nibool_interfaces_ext_mesh,
+                                                                                 ilevel);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      hipLaunchKernelGGL(assemble_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                   mp->d_accel,
-                                                                                   mp->d_send_accel_buffer,
-                                                                                   mp->num_interfaces_ext_mesh,
-                                                                                   mp->d_lts_num_interface_p_refine_ibool,
-                                                                                   mp->d_lts_interface_p_refine_ibool,
-                                                                                   mp->max_nibool_interfaces_ext_mesh,
-                                                                                   ilevel);
-    }
-#endif
-    GPU_ERROR_CHECKING("assemble_boundary_lts_accel_on_device");
-
-    // wait until kernel is finished before starting async memcpy
-    gpuSynchronize();
+  if (run_hip){
+    hipLaunchKernelGGL(assemble_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                 mp->d_accel,
+                                                                                 mp->d_send_accel_buffer,
+                                                                                 mp->num_interfaces_ext_mesh,
+                                                                                 mp->d_lts_num_interface_p_refine_ibool,
+                                                                                 mp->d_lts_interface_p_refine_ibool,
+                                                                                 mp->max_nibool_interfaces_ext_mesh,
+                                                                                 ilevel);
   }
+#endif
+  GPU_ERROR_CHECKING("assemble_boundary_lts_accel_on_device");
+
+  // wait until kernel is finished before starting async memcpy
+  gpuSynchronize();
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -370,48 +373,47 @@ void FC_FUNC_(assemble_reduced_mpi_device_lts,
 
   // checks if anything to do
   if (num_interface_p_refine_boundary == 0) return;
+  if (mp->size_mpi_buffer <= 0) return;
 
-  if (mp->size_mpi_buffer > 0){
-    // safety check: CUDA-aware MPI - not fully implemented yet
-    if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
+  // safety check: CUDA-aware MPI - not fully implemented yet
+  if (mp->use_cuda_aware_mpi) { exit_on_error("LTS mode with CUDA-aware MPI is not fully implemented yet."); }
 
-    // wait for copy to finish
-    gpuStreamSynchronize(mp->copy_stream);
+  // wait for copy to finish
+  gpuStreamSynchronize(mp->copy_stream);
 
-    int blocksize = BLOCKSIZE_TRANSFER;
+  int blocksize = BLOCKSIZE_TRANSFER;
 
-    int size_padded = ((int)ceil(((double)num_interface_p_refine_boundary)/((double)blocksize)))*blocksize;
+  int size_padded = ((int)ceil(((double)num_interface_p_refine_boundary)/((double)blocksize)))*blocksize;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
 #ifdef USE_CUDA
-    if (run_cuda){
-      assemble_reduced_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
-                                                                                           mp->d_send_accel_buffer,
-                                                                                           num_interface_p_refine_boundary,
-                                                                                           mp->d_lts_interface_p_refine_boundary,
-                                                                                           mp->lts_max_nibool_interfaces_boundary,
-                                                                                           ilevel);
-    }
+  if (run_cuda){
+    assemble_reduced_boundary_lts_accel_on_device<<<grid,threads,0,mp->compute_stream>>>(mp->d_accel,
+                                                                                         mp->d_send_accel_buffer,
+                                                                                         num_interface_p_refine_boundary,
+                                                                                         mp->d_lts_interface_p_refine_boundary,
+                                                                                         mp->lts_max_nibool_interfaces_boundary,
+                                                                                         ilevel);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      hipLaunchKernelGGL(assemble_reduced_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                           mp->d_accel,
-                                                                                           mp->d_send_accel_buffer,
-                                                                                           num_interface_p_refine_boundary,
-                                                                                           mp->d_lts_interface_p_refine_boundary,
-                                                                                           mp->lts_max_nibool_interfaces_boundary,
-                                                                                           ilevel);
-    }
-#endif
-    GPU_ERROR_CHECKING("assemble_reduced_boundary_lts_accel_on_device");
-
-    // wait until kernel is finished before starting async memcpy
-    gpuSynchronize();
+  if (run_hip){
+    hipLaunchKernelGGL(assemble_reduced_boundary_lts_accel_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                         mp->d_accel,
+                                                                                         mp->d_send_accel_buffer,
+                                                                                         num_interface_p_refine_boundary,
+                                                                                         mp->d_lts_interface_p_refine_boundary,
+                                                                                         mp->lts_max_nibool_interfaces_boundary,
+                                                                                         ilevel);
   }
+#endif
+  GPU_ERROR_CHECKING("assemble_reduced_boundary_lts_accel_on_device");
+
+  // wait until kernel is finished before starting async memcpy
+  gpuSynchronize();
 }

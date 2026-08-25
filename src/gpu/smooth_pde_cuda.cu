@@ -123,43 +123,44 @@ void FC_FUNC_(transfer_boun_dat_smooth_pde_from_device,
   Mesh* mp = (Mesh*)(*Mesh_pointer);
   Smooth_pde_data* sp = (Smooth_pde_data*)(*Container_smooth_pde);
 
-  if (sp->size_mpi_buffer_smooth > 0) {
-    int blocksize = BLOCKSIZE_TRANSFER;
-    int size_padded = ((int)ceil(((double)(mp->max_nibool_interfaces_ext_mesh))/((double)blocksize)))*blocksize;
+  // checks if anything to do
+  if (sp->size_mpi_buffer_smooth <= 0) return;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int blocksize = BLOCKSIZE_TRANSFER;
+  int size_padded = ((int)ceil(((double)(mp->max_nibool_interfaces_ext_mesh))/((double)blocksize)))*blocksize;
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 #ifdef USE_CUDA
-    if (run_cuda) {
-      prepare_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(sp->d_ddat_smooth_glob,
-                                                                                  sp->d_send_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_ibool_interfaces_ext_mesh
-                                                                                  );
-    }
+  if (run_cuda) {
+    prepare_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(sp->d_ddat_smooth_glob,
+                                                                                sp->d_send_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                mp->d_nibool_interfaces_ext_mesh,
+                                                                                mp->d_ibool_interfaces_ext_mesh
+                                                                                );
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip) {
-       hipLaunchKernelGGL(prepare_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                  sp->d_ddat_smooth_glob,
-                                                                                  sp->d_send_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_ibool_interfaces_ext_mesh
-                                                                                  );
-    }
-#endif
-    gpuStreamSynchronize(mp->compute_stream);
-
-    // copies buffer to CPU
-    gpuMemcpy_tohost_field(send_buffer_smooth,sp->d_send_buffer,sp->size_mpi_buffer_smooth);
+  if (run_hip) {
+     hipLaunchKernelGGL(prepare_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                sp->d_ddat_smooth_glob,
+                                                                                sp->d_send_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                mp->d_nibool_interfaces_ext_mesh,
+                                                                                mp->d_ibool_interfaces_ext_mesh
+                                                                                );
   }
+#endif
+  gpuStreamSynchronize(mp->compute_stream);
+
+  // copies buffer to CPU
+  gpuMemcpy_tohost_field(send_buffer_smooth,sp->d_send_buffer,sp->size_mpi_buffer_smooth);
 
   GPU_ERROR_CHECKING("transfer_boun_dat_smooth_pde_from_device");
 }
@@ -176,46 +177,47 @@ void FC_FUNC_(transfer_asmbl_dat_smooth_pde_from_device,
   Mesh* mp = (Mesh*)(*Mesh_pointer);
   Smooth_pde_data* sp = (Smooth_pde_data*)(*Container_smooth_pde);
 
-  if (sp->size_mpi_buffer_smooth > 0) {
-    int blocksize = BLOCKSIZE_TRANSFER;
-    int size_padded = ((int)ceil(((double)(mp->max_nibool_interfaces_ext_mesh))/((double)blocksize)))*blocksize;
+  // checks if anything to do
+  if (sp->size_mpi_buffer_smooth <= 0) return;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int blocksize = BLOCKSIZE_TRANSFER;
+  int size_padded = ((int)ceil(((double)(mp->max_nibool_interfaces_ext_mesh))/((double)blocksize)))*blocksize;
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
-    // synchronizes
-    gpuSynchronize();
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
-    // copies buffer onto GPU
-    gpuMemcpy_todevice_field(sp->d_send_buffer,recv_buffer_smooth,sp->size_mpi_buffer_smooth);
+  // synchronizes
+  gpuSynchronize();
+
+  // copies buffer onto GPU
+  gpuMemcpy_todevice_field(sp->d_send_buffer,recv_buffer_smooth,sp->size_mpi_buffer_smooth);
 
 #ifdef USE_CUDA
-    if (run_cuda) {
-      assemble_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(sp->d_ddat_smooth_glob,
-                                                                                  sp->d_send_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_ibool_interfaces_ext_mesh
-                                                                                  );
-    }
+  if (run_cuda) {
+    assemble_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(sp->d_ddat_smooth_glob,
+                                                                                sp->d_send_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                mp->d_nibool_interfaces_ext_mesh,
+                                                                                mp->d_ibool_interfaces_ext_mesh
+                                                                                );
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip) {
-       hipLaunchKernelGGL(assemble_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                                  sp->d_ddat_smooth_glob,
-                                                                                  sp->d_send_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_ibool_interfaces_ext_mesh
-                                                                                  );
-    }
-#endif
+  if (run_hip) {
+     hipLaunchKernelGGL(assemble_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                                                sp->d_ddat_smooth_glob,
+                                                                                sp->d_send_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                mp->d_nibool_interfaces_ext_mesh,
+                                                                                mp->d_ibool_interfaces_ext_mesh
+                                                                                );
   }
+#endif
 
   GPU_ERROR_CHECKING("transfer_asmbl_dat_smooth_pde_from_device");
 }

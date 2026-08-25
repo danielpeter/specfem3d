@@ -44,82 +44,81 @@ void FC_FUNC_(transfer_boun_pot_from_device,
                                              const int* FORWARD_OR_ADJOINT){
 
   TRACE("transfer_boun_pot_from_device");
+
   //get mesh pointer out of fortran integer container
   Mesh* mp = (Mesh*)(*Mesh_pointer);
 
   // checks if anything to do
-  if (mp->size_mpi_buffer_potential > 0){
+  if (mp->size_mpi_buffer_potential <= 0) return;
 
-    int blocksize = BLOCKSIZE_TRANSFER;
-    int size_padded = ((int)ceil(((double)(mp->max_nibool_interfaces_ext_mesh))/((double)blocksize)))*blocksize;
+  int blocksize = BLOCKSIZE_TRANSFER;
+  int size_padded = ((int)ceil(((double)(mp->max_nibool_interfaces_ext_mesh))/((double)blocksize)))*blocksize;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
-    // selects arrays
-    field* d_potential_dot_dot = NULL;
-    field* d_send_buffer = NULL;
-    if (*FORWARD_OR_ADJOINT == 1) {
-      // forward wavefield
-      d_potential_dot_dot = mp->d_potential_dot_dot_acoustic;
-      if (mp->use_cuda_aware_mpi) {
-        d_send_buffer = send_potential_dot_dot_buffer; // buffer on GPU
-      } else {
-        d_send_buffer = mp->d_send_potential_dot_dot_buffer;
-      }
-    } else if (*FORWARD_OR_ADJOINT == 3) {
-      // backward/reconstructed wavefield
-      d_potential_dot_dot = mp->d_b_potential_dot_dot_acoustic;
-      if (mp->use_cuda_aware_mpi) {
-        d_send_buffer = send_potential_dot_dot_buffer; // buffer on GPU
-      } else {
-        d_send_buffer = mp->d_b_send_potential_dot_dot_buffer;
-      }
+  // selects arrays
+  field* d_potential_dot_dot = NULL;
+  field* d_send_buffer = NULL;
+  if (*FORWARD_OR_ADJOINT == 1) {
+    // forward wavefield
+    d_potential_dot_dot = mp->d_potential_dot_dot_acoustic;
+    if (mp->use_cuda_aware_mpi) {
+      d_send_buffer = send_potential_dot_dot_buffer; // buffer on GPU
+    } else {
+      d_send_buffer = mp->d_send_potential_dot_dot_buffer;
     }
+  } else if (*FORWARD_OR_ADJOINT == 3) {
+    // backward/reconstructed wavefield
+    d_potential_dot_dot = mp->d_b_potential_dot_dot_acoustic;
+    if (mp->use_cuda_aware_mpi) {
+      d_send_buffer = send_potential_dot_dot_buffer; // buffer on GPU
+    } else {
+      d_send_buffer = mp->d_b_send_potential_dot_dot_buffer;
+    }
+  }
 
 #ifdef USE_CUDA
-    if (run_cuda){
-      // fills mpi boundary buffer
-      prepare_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(d_potential_dot_dot,
-                                                                                  d_send_buffer,
-                                                                                  mp->num_interfaces_ext_mesh,
-                                                                                  mp->max_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_nibool_interfaces_ext_mesh,
-                                                                                  mp->d_ibool_interfaces_ext_mesh);
-    }
+  if (run_cuda){
+    // fills mpi boundary buffer
+    prepare_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(d_potential_dot_dot,
+                                                                                d_send_buffer,
+                                                                                mp->num_interfaces_ext_mesh,
+                                                                                mp->max_nibool_interfaces_ext_mesh,
+                                                                                mp->d_nibool_interfaces_ext_mesh,
+                                                                                mp->d_ibool_interfaces_ext_mesh);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      // fills mpi boundary buffer
-      hipLaunchKernelGGL(prepare_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                               d_potential_dot_dot,
-                                                               d_send_buffer,
-                                                               mp->num_interfaces_ext_mesh,
-                                                               mp->max_nibool_interfaces_ext_mesh,
-                                                               mp->d_nibool_interfaces_ext_mesh,
-                                                               mp->d_ibool_interfaces_ext_mesh);
-    }
+  if (run_hip){
+    // fills mpi boundary buffer
+    hipLaunchKernelGGL(prepare_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                             d_potential_dot_dot,
+                                                             d_send_buffer,
+                                                             mp->num_interfaces_ext_mesh,
+                                                             mp->max_nibool_interfaces_ext_mesh,
+                                                             mp->d_nibool_interfaces_ext_mesh,
+                                                             mp->d_ibool_interfaces_ext_mesh);
+  }
 #endif
+  GPU_ERROR_CHECKING("after prepare_boundary_potential_on_device");
 
-    //GPU_ERROR_CHECKING("after prepare_boundary_potential_on_device");
+  // synchronizes
+  //gpuSynchronize();
+  // explicitly waits until previous compute stream finishes
+  // (cudaMemcpy implicitly synchronizes all other cuda operations)
+  gpuStreamSynchronize(mp->compute_stream);
 
-    // synchronizes
-    //gpuSynchronize();
-    // explicitly waits until previous compute stream finishes
-    // (cudaMemcpy implicitly synchronizes all other cuda operations)
-    gpuStreamSynchronize(mp->compute_stream);
-
+  // copies buffer to CPU
+  if (mp->use_cuda_aware_mpi){
+    // CUDA-aware MPI buffers on GPU, no copy needed
+    //gpuMemcpy_devicetodevice_field(send_potential_dot_dot_buffer,d_send_buffer,mp->size_mpi_buffer_potential);
+  } else {
     // copies buffer to CPU
-    if (mp->use_cuda_aware_mpi){
-      // CUDA-aware MPI buffers on GPU, no copy needed
-      //gpuMemcpy_devicetodevice_field(send_potential_dot_dot_buffer,d_send_buffer,mp->size_mpi_buffer_potential);
-    } else {
-      // copies buffer to CPU
-      gpuMemcpy_tohost_field(send_potential_dot_dot_buffer,d_send_buffer,mp->size_mpi_buffer_potential);
-    }
+    gpuMemcpy_tohost_field(send_potential_dot_dot_buffer,d_send_buffer,mp->size_mpi_buffer_potential);
   }
 
   // finish timing of kernel+memcpy
@@ -145,6 +144,7 @@ void FC_FUNC_(transfer_asmbl_pot_to_device,
                                             const int* FORWARD_OR_ADJOINT) {
 
   TRACE("transfer_asmbl_pot_to_device");
+
   //get mesh pointer out of fortran integer container
   Mesh* mp = (Mesh*)(*Mesh_pointer);
 
@@ -153,74 +153,74 @@ void FC_FUNC_(transfer_asmbl_pot_to_device,
   //start_timing_gpu(&start,&stop);
 
   // checks if anything to do
-  if (mp->size_mpi_buffer_potential > 0){
+  if (mp->size_mpi_buffer_potential <= 0) return;
 
-    // assembles on GPU
-    int blocksize = BLOCKSIZE_TRANSFER;
-    int size_padded = ((int)ceil(((double)mp->max_nibool_interfaces_ext_mesh)/((double)blocksize)))*blocksize;
+  // assembles on GPU
+  int blocksize = BLOCKSIZE_TRANSFER;
+  int size_padded = ((int)ceil(((double)mp->max_nibool_interfaces_ext_mesh)/((double)blocksize)))*blocksize;
 
-    int num_blocks_x, num_blocks_y;
-    get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
 
-    dim3 grid(num_blocks_x,num_blocks_y);
-    dim3 threads(blocksize,1,1);
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
-    // selects arrays
-    field* d_potential_dot_dot = NULL;
-    field* d_send_buffer = NULL;
-    if (*FORWARD_OR_ADJOINT == 1) {
-      // forward wavefield
-      d_potential_dot_dot = mp->d_potential_dot_dot_acoustic;
-      if (mp->use_cuda_aware_mpi) {
-        d_send_buffer = buffer_recv_scalar_ext_mesh;  // buffer on device
-      } else {
-        d_send_buffer = mp->d_send_potential_dot_dot_buffer;
-      }
-    } else if (*FORWARD_OR_ADJOINT == 3) {
-      // backward/reconstructed wavefield
-      d_potential_dot_dot = mp->d_b_potential_dot_dot_acoustic;
-      if (mp->use_cuda_aware_mpi) {
-        d_send_buffer = buffer_recv_scalar_ext_mesh;  // buffer on device
-      } else {
-        d_send_buffer = mp->d_b_send_potential_dot_dot_buffer;
-      }
-    }
-
-    // synchronizes
-    gpuSynchronize();
-
-    // copies buffer onto GPU
-    if (mp->use_cuda_aware_mpi){
-      // CUDA-aware MPI buffers on GPU, no copy needed
-      //gpuMemcpy_devicetodevice_field(d_send_buffer, buffer_recv_scalar_ext_mesh,mp->size_mpi_buffer_potential);
+  // selects arrays
+  field* d_potential_dot_dot = NULL;
+  field* d_send_buffer = NULL;
+  if (*FORWARD_OR_ADJOINT == 1) {
+    // forward wavefield
+    d_potential_dot_dot = mp->d_potential_dot_dot_acoustic;
+    if (mp->use_cuda_aware_mpi) {
+      d_send_buffer = buffer_recv_scalar_ext_mesh;  // buffer on device
     } else {
-      // // buffer copy from CPU
-      gpuMemcpy_todevice_field(d_send_buffer, buffer_recv_scalar_ext_mesh,mp->size_mpi_buffer_potential);
+      d_send_buffer = mp->d_send_potential_dot_dot_buffer;
     }
+  } else if (*FORWARD_OR_ADJOINT == 3) {
+    // backward/reconstructed wavefield
+    d_potential_dot_dot = mp->d_b_potential_dot_dot_acoustic;
+    if (mp->use_cuda_aware_mpi) {
+      d_send_buffer = buffer_recv_scalar_ext_mesh;  // buffer on device
+    } else {
+      d_send_buffer = mp->d_b_send_potential_dot_dot_buffer;
+    }
+  }
 
-    // assembles field
+  // synchronizes
+  gpuSynchronize();
+
+  // copies buffer onto GPU
+  if (mp->use_cuda_aware_mpi){
+    // CUDA-aware MPI buffers on GPU, no copy needed
+    //gpuMemcpy_devicetodevice_field(d_send_buffer, buffer_recv_scalar_ext_mesh,mp->size_mpi_buffer_potential);
+  } else {
+    // // buffer copy from CPU
+    gpuMemcpy_todevice_field(d_send_buffer, buffer_recv_scalar_ext_mesh,mp->size_mpi_buffer_potential);
+  }
+
+  // assembles field
 #ifdef USE_CUDA
-    if (run_cuda){
-      assemble_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(d_potential_dot_dot,
-                                                                                   d_send_buffer,
-                                                                                   mp->num_interfaces_ext_mesh,
-                                                                                   mp->max_nibool_interfaces_ext_mesh,
-                                                                                   mp->d_nibool_interfaces_ext_mesh,
-                                                                                   mp->d_ibool_interfaces_ext_mesh);
-    }
+  if (run_cuda){
+    assemble_boundary_potential_on_device<<<grid,threads,0,mp->compute_stream>>>(d_potential_dot_dot,
+                                                                                 d_send_buffer,
+                                                                                 mp->num_interfaces_ext_mesh,
+                                                                                 mp->max_nibool_interfaces_ext_mesh,
+                                                                                 mp->d_nibool_interfaces_ext_mesh,
+                                                                                 mp->d_ibool_interfaces_ext_mesh);
+  }
 #endif
 #ifdef USE_HIP
-    if (run_hip){
-      hipLaunchKernelGGL(assemble_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
-                                                                d_potential_dot_dot,
-                                                                d_send_buffer,
-                                                                mp->num_interfaces_ext_mesh,
-                                                                mp->max_nibool_interfaces_ext_mesh,
-                                                                mp->d_nibool_interfaces_ext_mesh,
-                                                                mp->d_ibool_interfaces_ext_mesh);
-    }
-#endif
+  if (run_hip){
+    hipLaunchKernelGGL(assemble_boundary_potential_on_device, dim3(grid), dim3(threads), 0, mp->compute_stream,
+                                                              d_potential_dot_dot,
+                                                              d_send_buffer,
+                                                              mp->num_interfaces_ext_mesh,
+                                                              mp->max_nibool_interfaces_ext_mesh,
+                                                              mp->d_nibool_interfaces_ext_mesh,
+                                                              mp->d_ibool_interfaces_ext_mesh);
   }
+#endif
+
   // kernel timing
   //stop_timing_gpu(&start,&stop,"assemble_boundary_potential_on_device");
 
