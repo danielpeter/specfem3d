@@ -517,23 +517,23 @@
                 if (sqrt(((dble(xcoord) - (X_SOURCE_EXT_MESH))**2 + &
                           (dble(ycoord) - (Y_SOURCE_EXT_MESH))**2 + &
                           (dble(zcoord) - (Z_SOURCE_EXT_MESH))**2)) < RADIUS_TO_MUTE) then
-                  field_display(ilocnum+ieoff) = 0.0
+                  field_display(ilocnum+ieoff) = 0.d0
                 endif
               endif
             else
               ! movie
               if (inorm == 1) then
                 ! norm of velocity
-                field_display(ilocnum+ieoff) = sqrt(vectorz**2+vectory**2+vectorx**2)
+                field_display(ilocnum+ieoff) = sqrt(dble(vectorz)**2+dble(vectory)**2+dble(vectorx)**2)
               else if (inorm == 2) then
                 ! velocity x-component
-                field_display(ilocnum+ieoff) = vectorx
+                field_display(ilocnum+ieoff) = dble(vectorx)
               else if (inorm == 3) then
                 ! velocity y-component
-                field_display(ilocnum+ieoff) = vectory
+                field_display(ilocnum+ieoff) = dble(vectory)
               else
                 ! velocity z-component
-                field_display(ilocnum+ieoff) = vectorz
+                field_display(ilocnum+ieoff) = dble(vectorz)
               endif
             endif
 
@@ -696,16 +696,16 @@
             field_display(:) = (field_display(:) - min_field_current) / (max_field_current - min_field_current)
 
           ! rescale to [-1,1]
-          field_display(:) = 2.*field_display(:) - 1.
+          field_display(:) = 2.d0*field_display(:) - 1.d0
 
           ! apply threshold to normalized field
           if (APPLY_THRESHOLD) &
-            where(abs(field_display(:)) <= THRESHOLD) field_display = 0.
+            where(abs(field_display(:)) <= THRESHOLD) field_display = 0.d0
         endif
 
         ! apply non linear scaling to normalized field if needed
         if (NONLINEAR_SCALING) then
-          where(field_display(:) >= 0.)
+          where(field_display(:) >= 0.d0)
             field_display = field_display ** POWER_SCALING
           elsewhere
             field_display = - abs(field_display) ** POWER_SCALING
@@ -715,10 +715,10 @@
         ! normalizes values
         if (NORMALIZE_OUTPUT) then
           ! map back to [0,1]
-          field_display(:) = (field_display(:) + 1.) / 2.
+          field_display(:) = (field_display(:) + 1.d0) / 2.d0
 
           ! map field to [0:255] for AVS color scale
-          field_display(:) = 255. * field_display(:)
+          field_display(:) = 255.d0 * field_display(:)
         endif
 
       ! apply scaling only if selected for shaking map
@@ -732,9 +732,37 @@
         field_display = field_display ** POWER_SCALING
 
         ! map field to [0:255] for AVS color scale
-        field_display(:) = 255. * field_display(:)
+        field_display(:) = 255.d0 * field_display(:)
 
       endif
+
+      ! try to avoid underflow crashes when reading with Paraview
+      ! for example, AVS format uses `float` as values,
+      ! if sngl(val) drops below the single-precision limit, then force it to 0.0
+      do i = 1,npointot
+        ! field values
+        if (abs(field_display(i)) < tiny(0.0e0)) then
+          field_display(i) = 0.0e0
+        else
+          field_display(i) = sngl(field_display(i))
+        endif
+        ! same for coordinates
+        if (abs(xp_save(i)) < tiny(0.0e0)) then
+          xp_save(i) = 0.0e0
+        else
+          xp_save(i) = sngl(xp_save(i))
+        endif
+        if (abs(yp_save(i)) < tiny(0.0e0)) then
+          yp_save(i) = 0.0e0
+        else
+          yp_save(i) = sngl(yp_save(i))
+        endif
+        if (abs(zp_save(i)) < tiny(0.0e0)) then
+          zp_save(i) = 0.0e0
+        else
+          zp_save(i) = sngl(zp_save(i))
+        endif
+      enddo
 
       !--- ****** create AVS file using sorted list ******
 
@@ -750,14 +778,26 @@
       if (plot_shaking_map) then
 
         if (USE_OPENDX) then
+          ! DX format
           write(outputname,"('/DX_shaking_map.dx')")
           open(unit=IOUT,file=trim(OUTPUT_FILES)//outputname,status='unknown')
           write(IOUT,*) 'object 1 class array type float rank 1 shape 3 items ',nglob,' data follows'
         else if (USE_AVS) then
+          ! AVS format
           write(outputname,"('/AVS_shaking_map.inp')")
           open(unit=IOUT,file=trim(OUTPUT_FILES)//outputname,status='unknown')
+          write(IOUT,'(a)') '#'
+          write(IOUT,'(a)') '# AVS UCD file created by xcreate_movie_AVS_DX'
+          write(IOUT,'(a)') '# contains shakemap data'
+          write(IOUT,'(a)') '#'
+          ! file format description: http://www.cs.cmu.edu/~viper/Data/avs-field-description.ps
+          ! format:  number of nodes, the number of cells, and the length of the vector of data
+          !          associated with the nodes, cells, and the model.
+          ! < num_nodes> < num_cells> < num_ndata> < num_cdata> < num_mdata>
+          !
           write(IOUT,*) nglob,' ',nspectot_AVS_max,' 1 0 0'
        else if (USE_GMT) then
+          ! GMT format
           write(outputname,"('/gmt_shaking_map.xyz')")
           open(unit=IOUT,file=trim(OUTPUT_FILES)//outputname,status='unknown')
         else
@@ -767,14 +807,26 @@
       else
 
         if (USE_OPENDX) then
+          ! DX format
           write(outputname,"('/DX_movie_',i6.6,'.dx')") ivalue
           open(unit=IOUT,file=trim(OUTPUT_FILES)//outputname,status='unknown')
           write(IOUT,*) 'object 1 class array type float rank 1 shape 3 items ',nglob,' data follows'
         else if (USE_AVS) then
+          ! AVS format
           write(outputname,"('/AVS_movie_',i6.6,'.inp')") ivalue
           open(unit=IOUT,file=trim(OUTPUT_FILES)//outputname,status='unknown')
+          write(IOUT,'(a)') '#'
+          write(IOUT,'(a)') '# AVS UCD file created by xcreate_movie_AVS_DX'
+          write(IOUT,'(a,i6.6)') '# contains movie data for single time step: ',it
+          write(IOUT,'(a)') '#'
+          ! file format description: http://www.cs.cmu.edu/~viper/Data/avs-field-description.ps
+          ! format:  number of nodes, the number of cells, and the length of the vector of data
+          !          associated with the nodes, cells, and the model.
+          ! < num_nodes> < num_cells> < num_ndata> < num_cdata> < num_mdata>
+          !
           write(IOUT,*) nglob,' ',nspectot_AVS_max,' 1 0 0'
        else if (USE_GMT) then
+          ! GMT format
           write(outputname,"('/gmt_movie_',i6.6,'.xyz')") ivalue
           open(unit=IOUT,file=trim(OUTPUT_FILES)//outputname,status='unknown')
         else
@@ -812,16 +864,23 @@
               ipoin = ipoin + 1
               ireorder(ibool_number) = ipoin
               if (USE_OPENDX) then
-                write(IOUT,*) sngl(xp_save(ilocnum+ieoff)),sngl(yp_save(ilocnum+ieoff)),sngl(zp_save(ilocnum+ieoff))
+                ! DX format
+                !write(IOUT,*) sngl(xp_save(ilocnum+ieoff)),sngl(yp_save(ilocnum+ieoff)),sngl(zp_save(ilocnum+ieoff))
+                write(IOUT,"(f18.7,1x,f18.7,1x,f18.7)") &
+                  sngl(xp_save(ilocnum+ieoff)),sngl(yp_save(ilocnum+ieoff)),sngl(zp_save(ilocnum+ieoff))
               else if (USE_AVS) then
-                write(IOUT,*) ireorder(ibool_number),sngl(xp_save(ilocnum+ieoff)), &
-                              sngl(yp_save(ilocnum+ieoff)),sngl(zp_save(ilocnum+ieoff))
+                ! AVS format
+                !write(IOUT,*) ireorder(ibool_number),sngl(xp_save(ilocnum+ieoff)), &
+                !              sngl(yp_save(ilocnum+ieoff)),sngl(zp_save(ilocnum+ieoff))
+                write(IOUT,"(i10,1x,f18.7,1x,f18.7,1x,f18.7)") ireorder(ibool_number), &
+                  sngl(xp_save(ilocnum+ieoff)),sngl(yp_save(ilocnum+ieoff)),sngl(zp_save(ilocnum+ieoff))
               endif
             endif
             mask_point(ibool_number) = .true.
           enddo
         enddo
 
+        ! DX format
         if (USE_OPENDX) &
           write(IOUT,*) 'object 2 class array type int rank 1 shape 4 items ',nspectot_AVS_max,' data follows'
 
@@ -834,6 +893,7 @@
           ibool_number3 = iglob(ieoff + 3)
           ibool_number4 = iglob(ieoff + 4)
           if (USE_OPENDX) then
+            ! DX format
             ! point order in OpenDX is 1,4,2,3 *not* 1,2,3,4 as in AVS
             write(IOUT,"(i10,1x,i10,1x,i10,1x,i10)") ireorder(ibool_number1)-1, &
               ireorder(ibool_number4)-1,ireorder(ibool_number2)-1,ireorder(ibool_number3)-1
@@ -845,6 +905,7 @@
         enddo
 
         if (USE_OPENDX) then
+          ! DX format
           write(IOUT,*) 'attribute "element type" string "quads"'
           write(IOUT,*) 'attribute "ref" string "positions"'
           write(IOUT,*) 'object 3 class array type float rank 0 items ',nglob,' data follows'
@@ -857,6 +918,7 @@
 
         ! output data values
         mask_point = .false.
+
         do ispec = 1,nspectot_AVS_max
           ieoff = NGNOD2D_FOUR_CORNERS_AVS_DX*(ispec-1)
           ! four points for each element
@@ -864,17 +926,23 @@
             ibool_number = iglob(ilocnum+ieoff)
             if (.not. mask_point(ibool_number)) then
               if (USE_OPENDX) then
+                ! DX format
                 if (plot_shaking_map) then
-                  write(IOUT,*) sngl(field_display(ilocnum+ieoff))
+                  !write(IOUT,*) sngl(field_display(ilocnum+ieoff))
+                  write(IOUT,"(e18.6)") sngl(field_display(ilocnum+ieoff))
                 else
-                  write(IOUT,*) sngl(field_display(ilocnum+ieoff))
+                  !write(IOUT,*) sngl(field_display(ilocnum+ieoff))
+                  write(IOUT,"(e18.6)") sngl(field_display(ilocnum+ieoff))
                 endif
               else
                 ! AVS UCD format
+                ! need format specifier (e.g. for Cray): note it might have problems w/ very small values
                 if (plot_shaking_map) then
-                  write(IOUT,*) ireorder(ibool_number),sngl(field_display(ilocnum+ieoff))
+                  !write(IOUT,*) ireorder(ibool_number),sngl(field_display(ilocnum+ieoff))
+                  write(IOUT,"(i10,1x,e18.6)") ireorder(ibool_number),sngl(field_display(ilocnum+ieoff))
                 else
-                  write(IOUT,*) ireorder(ibool_number),sngl(field_display(ilocnum+ieoff))
+                  !write(IOUT,*) ireorder(ibool_number),sngl(field_display(ilocnum+ieoff))
+                  write(IOUT,"(i10,1x,e18.6)") ireorder(ibool_number),sngl(field_display(ilocnum+ieoff))
                 endif
               endif
             endif
